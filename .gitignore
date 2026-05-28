@@ -1,0 +1,14 @@
+# .NET
+bin/
+obj/
+artifacts/
+*.user
+
+# Native build output
+out/
+native/**/bazel-*
+
+# IDE
+.vs/
+.idea/
+.vscode/

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <RootNamespace>LiteRT</RootNamespace>
+    <AssemblyName>LiteRT</AssemblyName>
+    <PackageId>LiteRT</PackageId>
+    <Description>C# bindings for Google LiteRT (on-device inference runtime).</Description>
+  </PropertyGroup>
+</Project>

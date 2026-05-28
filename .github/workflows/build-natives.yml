@@ -1,0 +1,61 @@
+name: build-natives
+
+# Builds libLiteRtLmC (the LiteRT-LM C API shared library) for each platform and
+# uploads the result as a workflow artifact for manual download. Once the build is
+# stable we can promote these to a GitHub Release for automatic consumption.
+
+on:
+  workflow_dispatch:
+    inputs:
+      litert_lm_ref:
+        description: "LiteRT-LM git ref to build"
+        required: true
+        default: "main"
+  push:
+    paths:
+      - "native/litert-lm-c/**"
+      - ".github/workflows/build-natives.yml"
+
+env:
+  LITERT_LM_REPO: google-ai-edge/LiteRT-LM
+  LITERT_LM_REF: ${{ github.event.inputs.litert_lm_ref || 'main' }}
+
+jobs:
+  build:
+    name: ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: macos-14
+            rid: osx-arm64
+    steps:
+      - name: Checkout LiteRT.NET
+        uses: actions/checkout@v4
+        with:
+          path: litert-net
+
+      - name: Checkout LiteRT-LM
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.LITERT_LM_REPO }}
+          ref: ${{ env.LITERT_LM_REF }}
+          path: litert-lm
+
+      - name: Set up Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Build libLiteRtLmC
+        run: |
+          chmod +x litert-net/native/litert-lm-c/build.sh
+          litert-net/native/litert-lm-c/build.sh "$GITHUB_WORKSPACE/litert-lm" "$GITHUB_WORKSPACE/out"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libLiteRtLmC-${{ matrix.rid }}
+          path: out/*
+          if-no-files-found: error

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <RootNamespace>LiteRT.Examples.MinimalInference</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/LiteRT/LiteRT.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="models/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

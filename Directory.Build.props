@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Authors>Koki Ibukuro</Authors>
+    <Product>LiteRT.NET</Product>
+    <PackageProjectUrl>https://github.com/asus4/LiteRT.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/asus4/LiteRT.NET</RepositoryUrl>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <Version>0.1.0-alpha</Version>
+  </PropertyGroup>
+</Project>

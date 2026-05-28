@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/examples/">
+    <Project Path="examples/MinimalInference/MinimalInference.csproj" />
+    <Project Path="examples/SimpleLlm/SimpleLlm.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/LiteRT.LM/LiteRT.LM.csproj" />
+    <Project Path="src/LiteRT/LiteRT.csproj" />
+  </Folder>
+</Solution>

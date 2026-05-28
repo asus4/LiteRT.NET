@@ -1,0 +1,19 @@
+# Bazel package that wraps the LiteRT-LM C API (//c:engine) into a single
+# self-contained shared library exporting the `litert_lm_*` symbols.
+#
+# This file is copied into a checkout of the LiteRT-LM repository (see build.sh)
+# as `//litert_lm_dotnet/BUILD` and built with:
+#     bazel build //litert_lm_dotnet:LiteRtLmC
+#
+# `//c:engine` is declared `alwayslink = True`, so all of its exported symbols
+# (visibility("default") / __declspec(dllexport)) survive into the shared object,
+# and the LiteRT core runtime is statically linked in for a self-contained CPU build.
+
+cc_binary(
+    name = "LiteRtLmC",
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//c:engine",
+    ],
+)

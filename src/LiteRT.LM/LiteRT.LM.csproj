@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <RootNamespace>LiteRT.LM</RootNamespace>
+    <AssemblyName>LiteRT.LM</AssemblyName>
+    <PackageId>LiteRT.LM</PackageId>
+    <Description>C# bindings for Google LiteRT-LM (on-device LLM inference).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../LiteRT/LiteRT.csproj" />
+  </ItemGroup>
+</Project>
