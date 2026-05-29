@@ -11,5 +11,11 @@ native/**/bazel-*
 # Native binaries are fetched/built into src/*/runtimes in CI.
 src/**/runtimes/**
 
+# Unity packages ship natives under Plugins/, populated by scripts/sync-unity-natives.sh.
+# Ignore the binaries but keep the committed .meta files (and the directory structure).
+unity/**/Plugins/**
+!unity/**/Plugins/**/
+!unity/**/Plugins/**/*.meta
+
 # Profiling output
 default.profraw

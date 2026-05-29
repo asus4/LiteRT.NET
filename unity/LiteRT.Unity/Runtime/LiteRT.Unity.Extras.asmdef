@@ -1,0 +1,16 @@
+{
+    "name": "LiteRT.Unity.Extras",
+    "rootNamespace": "LiteRT.Unity",
+    "references": [
+        "LiteRT.Managed"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

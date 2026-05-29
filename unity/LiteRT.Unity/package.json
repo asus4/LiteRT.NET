@@ -1,0 +1,20 @@
+{
+  "name": "com.github.asus4.litert.unity",
+  "version": "0.1.0-alpha",
+  "displayName": "LiteRT Unity Utilities",
+  "description": "Optional Unity helpers for LiteRT",
+  "unity": "2022.3",
+  "keywords": [
+    "ai",
+    "litert",
+    "tflite",
+    "tensorflow",
+    "machine-learning"
+  ],
+  "author": {
+    "name": "Koki Ibukuro"
+  },
+  "dependencies": {
+    "com.github.asus4.litert": "0.1.0-alpha"
+  }
+}

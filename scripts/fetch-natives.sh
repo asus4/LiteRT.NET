@@ -100,6 +100,12 @@ place_file() {
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
 
+    # iOS core ships as an xcframework.zip (built once by build_ios_core_xcframework below),
+    # not a bare per-RID dylib — a loose .dylib can't be embedded/code-signed on iOS.
+    if [ "$class" = "core" ] && { [[ "$rid" == ios-* ]] || [[ "$rid" == iossimulator-* ]]; }; then
+        return 0
+    fi
+
     local out; out="$(dest_dir "$class" "$rid")"
     mkdir -p "$out"
 
@@ -183,5 +189,18 @@ for rid in $RIDS; do
     fi
     fetch_core_from_sdk "$rid"
 done
+
+# Build the iOS core xcframework.zip (device + simulator) when both prebuilt slices exist
+# and an iOS RID was requested. macOS-only (needs xcodebuild); skipped elsewhere.
+build_ios_core_xcframework() {
+    case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
+    [ "$(uname -s)" = "Darwin" ] || { echo "  (skip iOS xcframework: not macOS)"; return 0; }
+    local dev="$LITERT_LM_DIR/prebuilt/ios_arm64/libLiteRt.dylib"
+    local sim="$LITERT_LM_DIR/prebuilt/ios_sim_arm64/libLiteRt.dylib"
+    [ -f "$dev" ] && [ -f "$sim" ] || { echo "  (skip iOS xcframework: missing prebuilt dylibs)"; return 0; }
+    echo "[ios] building LiteRt.xcframework.zip"
+    "$REPO_DIR/scripts/make-ios-xcframework.sh" "$LITERT_LM_DIR/prebuilt" "$CORE_PKG/runtimes/ios/native"
+}
+build_ios_core_xcframework
 
 echo "Done."
