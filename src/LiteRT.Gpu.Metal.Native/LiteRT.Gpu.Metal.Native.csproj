@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>LiteRT.Native</PackageId>
-    <Description>Native LiteRT core runtime (libLiteRt) for all supported platforms. CPU only; GPU accelerators ship in LiteRT.Gpu.Metal.Native / LiteRT.Gpu.WebGpu.Native / LiteRT.Gpu.OpenCl.Native.</Description>
+    <PackageId>LiteRT.Gpu.Metal.Native</PackageId>
+    <Description>Optional Metal GPU accelerator for LiteRT (Apple platforms: macOS / iOS). Add alongside LiteRT.Native to enable GPU. For LiteRT-LM decode prefer LiteRT.Gpu.WebGpu.Native instead (Metal currently mis-computes LM logits).</Description>
 
-    <!-- Packaging-only: no managed assembly. -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>

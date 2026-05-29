@@ -9,5 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/LiteRT.LM/LiteRT.LM.csproj" />
+    <ProjectReference Include="../../src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj" />
   </ItemGroup>
 </Project>

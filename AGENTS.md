@@ -8,15 +8,21 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 | --- | --- |
 | `LiteRT.Managed` | Managed bindings for the LiteRT core C API (`litert/c/*.h`). Hand-written P/Invoke. Depends on `LiteRT.Native`. |
 | `LiteRT.Native` | Native LiteRT core runtime (`libLiteRt`) for all RIDs. CPU only. |
-| `LiteRT.Gpu.Native` | Optional core GPU accelerators / delegates (Metal / WebGpu / OpenCl). Add alongside `LiteRT.Native`. |
+| `LiteRT.Gpu.Metal.Native` | Optional Metal GPU accelerator (Apple: macOS / iOS). Add alongside `LiteRT.Native`. For LiteRT-LM decode prefer `LiteRT.Gpu.WebGpu.Native` (Metal mis-computes LM logits). |
+| `LiteRT.Gpu.WebGpu.Native` | Optional WebGPU (Dawn) GPU accelerator (desktop + Android). Required for LiteRT-LM GPU decode. |
+| `LiteRT.Gpu.OpenCl.Native` | Optional OpenCL / GL GPU accelerator (Android). |
 | `LiteRT.LM.Managed` | Managed bindings for the LiteRT-LM C API (`c/engine.h`). Depends on `LiteRT.LM.Native` and `LiteRT.Managed`. |
-| `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin + TopK GPU samplers) for all RIDs. |
+| `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin) for all RIDs. |
 
 Managed packages target `netstandard2.1` (Unity / IL2CPP) and `net8.0`; their assembly
 names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
 `runtimes/<rid>/native` and resolve at runtime via the default .NET native-library
 search (deps.json `NATIVE_DLL_SEARCH_DIRECTORIES`) — no environment variable or custom
 resolver. GPU accelerators are an optional add-on; the base install is CPU only.
+Each GPU backend ships in its own package so a consumer references exactly one: the
+core registry's accelerator probe order is hardcoded in the prebuilt library and
+registers the first dylib present in the load path, so "which backend" == "which
+accelerator package is referenced".
 
 ## Native libraries
 
@@ -57,11 +63,12 @@ dotnet run --project examples/MinimalInference -- <model.tflite> gpu  # GPU
 ```
 
 Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
-argument selects the accelerator (`cpu` or `gpu`). GPU requires the `LiteRT.Gpu.Native`
-package (referenced by this example) so the accelerator dylibs sit beside the core
-library; `LiteRtEnvironment` sets the `RuntimeLibraryDir` option so the runtime can load
-them, and limits auto-registration to the requested accelerators (a CPU-only run stays
-quiet instead of warning about absent GPU/NPU plugins).
+argument selects the accelerator (`cpu` or `gpu`). GPU requires a backend package; this
+example references `LiteRT.Gpu.Metal.Native` (Metal — the better fit for Unity on Apple)
+so the accelerator dylib sits beside the core library. `LiteRtEnvironment` sets the
+`RuntimeLibraryDir` option so the runtime can load it, and limits auto-registration to the
+requested accelerators (a CPU-only run stays quiet instead of warning about absent
+GPU/NPU plugins).
 
 ### SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
 
@@ -72,7 +79,13 @@ native/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
 LITERT_RIDS=osx-arm64 native/fetch-natives.sh
 
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
+dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
 ```
+
+For GPU decode this example references `LiteRT.Gpu.WebGpu.Native`: the Metal accelerator
+mis-computes LM logits (produces a repetition loop), whereas WebGPU/Dawn is correct.
+On-GPU sampling falls back to CPU sampling (the prebuilt GPU samplers are not shipped),
+which yields correct output.
 
 ## Repository layout
 
@@ -80,7 +93,9 @@ dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
 src/LiteRT/             Core managed bindings (LiteRT.Managed)
 src/LiteRT.LM/          LiteRT-LM managed bindings (LiteRT.LM.Managed)
 src/LiteRT.Native/      Core native runtime package (runtimes/<rid>/native)
-src/LiteRT.Gpu.Native/  Optional GPU accelerator package
+src/LiteRT.Gpu.Metal.Native/   Optional Metal GPU accelerator package (Apple)
+src/LiteRT.Gpu.WebGpu.Native/  Optional WebGPU accelerator package (desktop + Android)
+src/LiteRT.Gpu.OpenCl.Native/  Optional OpenCL/GL accelerator package (Android)
 src/LiteRT.LM.Native/   LM native runtime package
 build/                  Shared MSBuild logic for the Native packages
 examples/               Runnable dotnet samples

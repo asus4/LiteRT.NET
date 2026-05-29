@@ -28,6 +28,14 @@ namespace LiteRT.LM
         {
             if (modelPath == null) throw new ArgumentNullException(nameof(modelPath));
 
+            // The engine's internal LiteRT environment has no RuntimeLibraryDir, so the
+            // GPU registry dlopens accelerators by bare leaf name. Pre-load them by
+            // absolute path so that lookup resolves to an already-loaded image.
+            if (!string.Equals(backend, "cpu", StringComparison.OrdinalIgnoreCase))
+            {
+                NativeAccelerators.PreloadGpu();
+            }
+
             var settings = LiteRtLmNative.litert_lm_engine_settings_create(modelPath, backend, null, null);
             if (settings == IntPtr.Zero)
             {

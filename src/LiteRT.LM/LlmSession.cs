@@ -82,7 +82,9 @@ namespace LiteRT.LM
             done.Wait();
             GC.KeepAlive(callback);
 
-            if (error != null)
+            // "Max number of tokens reached" is how the engine signals a normal
+            // length-limited stop, not a failure, so return what was generated.
+            if (error != null && error.IndexOf("Max number of tokens", StringComparison.Ordinal) < 0)
             {
                 throw new InvalidOperationException($"LiteRT-LM streaming error: {error}");
             }

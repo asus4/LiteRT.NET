@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>LiteRT.Gpu.Native</PackageId>
-    <Description>Optional GPU accelerator plugins (Metal / WebGpu / OpenCl) and matching samplers for LiteRT. Add alongside LiteRT.Native to enable GPU.</Description>
+    <PackageId>LiteRT.Gpu.WebGpu.Native</PackageId>
+    <Description>Optional WebGPU (Dawn) GPU accelerator for LiteRT (desktop: macOS / Linux / Windows, and Android). Add alongside LiteRT.Native to enable GPU. Required for LiteRT-LM GPU decode.</Description>
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>

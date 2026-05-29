@@ -29,7 +29,9 @@ ALL_RIDS="osx-arm64 linux-x64 linux-arm64 win-x64 android-arm64 android-x64 ios-
 RIDS="${LITERT_RIDS:-$ALL_RIDS}"
 
 CORE_PKG="$REPO_DIR/src/LiteRT.Native"
-GPU_PKG="$REPO_DIR/src/LiteRT.Gpu.Native"
+GPU_METAL_PKG="$REPO_DIR/src/LiteRT.Gpu.Metal.Native"
+GPU_WEBGPU_PKG="$REPO_DIR/src/LiteRT.Gpu.WebGpu.Native"
+GPU_OPENCL_PKG="$REPO_DIR/src/LiteRT.Gpu.OpenCl.Native"
 LM_PKG="$REPO_DIR/src/LiteRT.LM.Native"
 
 # Map a .NET RID to the LiteRT-LM/prebuilt platform directory name.
@@ -47,18 +49,28 @@ prebuilt_platform() {
     esac
 }
 
-# Classify a native file by basename: core | gpu | lm | skip
+# Classify a native file by basename: core | gpu-metal | gpu-webgpu | gpu-opencl | lm | skip
 #
-# *Accelerator are core LiteRT GPU delegates (used by LiteRT.Managed for .tflite
-# GPU inference). *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM
-# decode-time plugins, so they ship with the LM stack, not the core GPU package.
+# *Accelerator are core LiteRT GPU delegates (used by LiteRT.Managed for .tflite GPU
+# inference AND by LiteRT-LM). They ship in per-backend packages so a consumer can pick
+# exactly one: the registry's accelerator probe order is hardcoded in the prebuilt lib
+# and registers the FIRST present, so "which backend" == "which dylib is in bin".
+#
+# *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM decode-time plugins.
+# We deliberately DO NOT ship them: the prebuilt WebGPU sampler is symbol-incompatible
+# with our self-built libLiteRtLmC, and on-GPU sampling is clamped to greedy anyway, so
+# the engine falls back to CPU sampling (correct output). Shipping them adds only dead
+# weight + a misleading warning. (Re-enable here if a compatible GPU sampler appears.)
 classify() {
     case "$1" in
         libLiteRt.dylib|libLiteRt.so|libLiteRt.dll|LiteRt.dll) echo "core" ;;
         libLiteRtLmC.*|LiteRtLmC.*)                            echo "lm" ;;
         *GemmaModelConstraintProvider*)                        echo "lm" ;;
-        *Sampler.*)                                            echo "lm" ;;
-        *Accelerator.*)                                        echo "gpu" ;;
+        *Sampler.*)                                            echo "skip" ;;
+        *MetalAccelerator.*)                                   echo "gpu-metal" ;;
+        *WebGpuAccelerator.*)                                  echo "gpu-webgpu" ;;
+        *OpenClAccelerator.*)                                  echo "gpu-opencl" ;;
+        *GpuAccelerator.*)                                     echo "gpu-opencl" ;;
         *)                                                     echo "skip" ;;
     esac
 }
@@ -66,9 +78,11 @@ classify() {
 # Destination dir for a class, given the rid.
 dest_dir() {
     case "$1" in
-        core) echo "$CORE_PKG/runtimes/$2/native" ;;
-        gpu)  echo "$GPU_PKG/runtimes/$2/native" ;;
-        lm)   echo "$LM_PKG/runtimes/$2/native" ;;
+        core)       echo "$CORE_PKG/runtimes/$2/native" ;;
+        gpu-metal)  echo "$GPU_METAL_PKG/runtimes/$2/native" ;;
+        gpu-webgpu) echo "$GPU_WEBGPU_PKG/runtimes/$2/native" ;;
+        gpu-opencl) echo "$GPU_OPENCL_PKG/runtimes/$2/native" ;;
+        lm)         echo "$LM_PKG/runtimes/$2/native" ;;
     esac
 }
 
@@ -79,17 +93,10 @@ place_file() {
     local base; base="$(basename "$src")"
     case "$base" in *.lib|BUILD) return 0 ;; esac
 
-    # Apple platforms use Metal. The macOS prebuilt also ships WebGPU libs, but the
-    # core GPU registry probes WebGPU before Metal on desktop and registers the first
-    # that loads, so a present WebGPU accelerator would shadow Metal. Drop WebGPU on
-    # Apple RIDs (accelerator + sampler) to make Metal the initial accelerator and
-    # match iOS, which ships Metal-only.
-    case "$rid" in
-        osx-*|ios-*|iossimulator-*)
-            case "$base" in *WebGpu*) return 0 ;; esac
-            ;;
-    esac
-
+    # Backends are routed into separate packages (classify -> dest_dir), so a consumer
+    # picks the accelerator by referencing one package. macOS ships both Metal and WebGPU
+    # prebuilts; they land in their respective packages. (For LM decode the Metal
+    # accelerator mis-computes logits, so LM consumers should use LiteRT.Gpu.WebGpu.Native.)
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
 

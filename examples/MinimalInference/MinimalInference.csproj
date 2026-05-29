@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/LiteRT/LiteRT.csproj" />
-    <ProjectReference Include="../../src/LiteRT.Gpu.Native/LiteRT.Gpu.Native.csproj" />
+    <ProjectReference Include="../../src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj" />
   </ItemGroup>
 
   <ItemGroup>

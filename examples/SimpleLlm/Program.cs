@@ -23,7 +23,14 @@ LlmEngine.SetMinLogLevel(3);
 
 Console.WriteLine($"Loading model: {modelPath} (backend: {backend})");
 using var engine = LlmEngine.Create(modelPath, backend);
-using var session = engine.CreateSession();
+using var session = engine.CreateSession(new LiteRT.LM.Interop.LiteRtLmSamplerParams
+{
+    Type = LiteRT.LM.Interop.LiteRtLmSamplerType.TopK,
+    TopK = 40,
+    TopP = 0.95f,
+    Temperature = 1.0f,
+    Seed = 12345,
+});
 
 Console.WriteLine($"Prompt: {prompt}");
 Console.Write("Response: ");

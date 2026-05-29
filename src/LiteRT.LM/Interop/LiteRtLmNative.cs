@@ -76,6 +76,10 @@ namespace LiteRT.LM.Interop
         internal static extern void litert_lm_engine_settings_set_max_num_tokens(
             IntPtr settings, int max_num_tokens);
 
+        [DllImport(LibraryName)]
+        internal static extern void litert_lm_engine_settings_set_activation_data_type(
+            IntPtr settings, int activation_data_type_int);
+
         // --- Engine ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_engine_create(IntPtr settings);
