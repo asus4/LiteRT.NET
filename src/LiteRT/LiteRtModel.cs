@@ -9,7 +9,17 @@ namespace LiteRT
     {
         private IntPtr _handle;
 
+        // When the model is created from an in-memory buffer the native runtime references
+        // that buffer for the model's lifetime, so we pin it and release on Dispose.
+        private GCHandle _pinnedBuffer;
+
         private LiteRtModel(IntPtr handle) => _handle = handle;
+
+        private LiteRtModel(IntPtr handle, GCHandle pinnedBuffer)
+        {
+            _handle = handle;
+            _pinnedBuffer = pinnedBuffer;
+        }
 
         internal IntPtr Handle => _handle;
 
@@ -20,6 +30,34 @@ namespace LiteRT
                 LiteRtNative.LiteRtCreateModelFromFile(path, out var handle),
                 nameof(LiteRtNative.LiteRtCreateModelFromFile));
             return new LiteRtModel(handle);
+        }
+
+        /// <summary>
+        /// Creates a model from an in-memory <c>.tflite</c>/<c>.litert</c> buffer. Use this where
+        /// no real file path exists — e.g. Unity on Android, where <c>StreamingAssets</c> lives
+        /// inside the APK and must be read via <c>UnityWebRequest</c>. The buffer is pinned for the
+        /// lifetime of the model (the native runtime references it, it does not copy), and released
+        /// when <see cref="Dispose"/> is called.
+        /// </summary>
+        public static unsafe LiteRtModel CreateFromBuffer(byte[] data)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (data.Length == 0) throw new ArgumentException("Model buffer is empty.", nameof(data));
+
+            var pinned = GCHandle.Alloc(data, GCHandleType.Pinned);
+            try
+            {
+                void* ptr = (void*)pinned.AddrOfPinnedObject();
+                LiteRtException.ThrowIfError(
+                    LiteRtNative.LiteRtCreateModelFromBuffer(ptr, (UIntPtr)data.Length, out var handle),
+                    nameof(LiteRtNative.LiteRtCreateModelFromBuffer));
+                return new LiteRtModel(handle, pinned);
+            }
+            catch
+            {
+                pinned.Free();
+                throw;
+            }
         }
 
         /// <summary>Number of signatures exposed by the model.</summary>
@@ -49,6 +87,10 @@ namespace LiteRT
             {
                 LiteRtNative.LiteRtDestroyModel(_handle);
                 _handle = IntPtr.Zero;
+            }
+            if (_pinnedBuffer.IsAllocated)
+            {
+                _pinnedBuffer.Free();
             }
         }
     }

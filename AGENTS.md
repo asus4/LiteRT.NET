@@ -13,6 +13,7 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 | `LiteRT.Gpu.OpenCl.Native` | Optional OpenCL / GL GPU accelerator (Android). |
 | `LiteRT.LM.Managed` | Managed bindings for the LiteRT-LM C API (`c/engine.h`). Depends on `LiteRT.LM.Native` and `LiteRT.Managed`. |
 | `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin) for all RIDs. |
+| `LiteRT.Unity` (UPM) | Unity-only glue. **Not** a NuGet package — a UPM package at `src/LiteRT.Unity` (`com.github.asus4.litert`). Resolves the native plugin directory and feeds it to `LiteRT.LiteRtRuntime.NativeLibraryDirectory` so the runtime can `dlopen` accelerator plugins by absolute path under Unity. Used alongside the `LiteRT.Managed` / `LiteRT.Native` NuGet packages installed via NuGetForUnity. |
 
 Managed packages target `netstandard2.1` (Unity / IL2CPP) and `net8.0`; their assembly
 names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
@@ -49,43 +50,10 @@ copy-to-output for examples; `runtimes/<rid>/native` + deps.json for NuGet consu
 
 ## Examples
 
-First populate the host RID's natives once:
-
-```bash
-LITERT_RIDS=osx-arm64 native/fetch-natives.sh
-```
-
-### MinimalInference (LiteRT core)
-
-```bash
-dotnet run --project examples/MinimalInference                       # CPU (default)
-dotnet run --project examples/MinimalInference -- <model.tflite> gpu  # GPU
-```
-
-Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
-argument selects the accelerator (`cpu` or `gpu`). GPU requires a backend package; this
-example references `LiteRT.Gpu.Metal.Native` (Metal — the better fit for Unity on Apple)
-so the accelerator dylib sits beside the core library. `LiteRtEnvironment` sets the
-`RuntimeLibraryDir` option so the runtime can load it, and limits auto-registration to the
-requested accelerators (a CPU-only run stays quiet instead of warning about absent
-GPU/NPU plugins).
-
-### SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
-
-```bash
-# Build the LM native library once (Bazel; see native/litert-lm-c/build.sh):
-native/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
-# Then fetch-natives.sh copies it (and the Gemma plugin) into LiteRT.LM.Native:
-LITERT_RIDS=osx-arm64 native/fetch-natives.sh
-
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
-```
-
-For GPU decode this example references `LiteRT.Gpu.WebGpu.Native`: the Metal accelerator
-mis-computes LM logits (produces a repetition loop), whereas WebGPU/Dawn is correct.
-On-GPU sampling falls back to CPU sampling (the prebuilt GPU samplers are not shipped),
-which yields correct output.
+Runnable samples live under `examples/` (`MinimalInference`, `SimpleLlm`, and the Unity
+sample `MinimalInferenceUnity`). See **`examples/README.md`** for how to run them, the GPU
+accelerator notes, and the Unity setup (NuGetForUnity, the Apple-Silicon plugin fix, and
+how natives + model loading work under Unity).
 
 ## Repository layout
 
@@ -97,8 +65,10 @@ src/LiteRT.Gpu.Metal.Native/   Optional Metal GPU accelerator package (Apple)
 src/LiteRT.Gpu.WebGpu.Native/  Optional WebGPU accelerator package (desktop + Android)
 src/LiteRT.Gpu.OpenCl.Native/  Optional OpenCL/GL accelerator package (Android)
 src/LiteRT.LM.Native/   LM native runtime package
+src/LiteRT.Unity/       Unity UPM package (com.github.asus4.litert): native-dir resolution glue
 build/                  Shared MSBuild logic for the Native packages
-examples/               Runnable dotnet samples
+examples/               Runnable samples (see examples/README.md)
+examples/MinimalInferenceUnity/  Unity 6 sample consuming the NuGet packages via NuGetForUnity
 native/fetch-natives.sh Populates src/*.Native/runtimes from prebuilt/SDK/out
 native/litert-lm-c/     Bazel wrapper + build script for libLiteRtLmC
 .github/workflows/      CI (managed) and native build matrix

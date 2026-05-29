@@ -5,6 +5,23 @@ using System.Runtime.InteropServices;
 namespace LiteRT
 {
     /// <summary>
+    /// Runtime-wide configuration for locating the LiteRT native libraries. Hosts that do not
+    /// use the standard .NET native-library search (deps.json <c>runtimes/&lt;rid&gt;/native</c>)
+    /// can point the runtime at the directory holding the native libraries. Unity is the main
+    /// case: it imports natives as plugins under <c>Assets/</c> rather than the deps.json layout,
+    /// so <c>LiteRT.Unity</c> sets this before the first <see cref="LiteRtEnvironment"/> is
+    /// created so accelerator plugins can be <c>dlopen</c>'d by absolute path.
+    /// </summary>
+    public static class LiteRtRuntime
+    {
+        /// <summary>
+        /// Explicit directory containing the core native library (and any accelerator plugins).
+        /// When set and valid, it takes precedence over automatic probing. <c>null</c> by default.
+        /// </summary>
+        public static string? NativeLibraryDirectory { get; set; }
+    }
+
+    /// <summary>
     /// Locates the directory that holds the LiteRT native libraries at runtime.
     /// The LiteRT runtime needs this path (via the <c>RuntimeLibraryDir</c> environment
     /// option) to <c>dlopen</c> its accelerator plugins by absolute path.
@@ -25,6 +42,14 @@ namespace LiteRT
         internal static string? ResolveLibraryDirectory()
         {
             string core = CoreLibraryFileName;
+
+            // Explicit override (e.g. Unity sets the native plugin directory) wins.
+            string? overrideDir = LiteRtRuntime.NativeLibraryDirectory;
+            if (!string.IsNullOrEmpty(overrideDir) && File.Exists(Path.Combine(overrideDir!, core)))
+            {
+                return overrideDir;
+            }
+
             string baseDir = AppContext.BaseDirectory;
 
             if (File.Exists(Path.Combine(baseDir, core)))
