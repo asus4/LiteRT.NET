@@ -8,6 +8,12 @@ artifacts/
 out/
 native/**/bazel-*
 
+# Native binaries are fetched/built into src/*/runtimes in CI.
+# src/**/runtimes/**
+
+# Profiling output
+default.profraw
+
 # IDE
 .vs/
 .idea/

@@ -9,27 +9,52 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          path: litert-net
 
-      - uses: actions/setup-dotnet@v4
+      # Needed by fetch-natives.sh for the prebuilt core / GPU / Gemma plugin.
+      - name: Checkout LiteRT-LM
+        uses: actions/checkout@v6
+        with:
+          repository: google-ai-edge/LiteRT-LM
+          ref: main
+          path: LiteRT-LM
+
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             10.0.x
 
+      - name: Fetch natives (linux-x64; LM lib comes from build-natives artifacts)
+        working-directory: litert-net
+        run: |
+          chmod +x native/fetch-natives.sh
+          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" LITERT_RIDS=linux-x64 native/fetch-natives.sh
+
       - name: Restore
+        working-directory: litert-net
         run: dotnet restore
 
       - name: Build (managed)
+        working-directory: litert-net
         run: dotnet build --no-restore -c Release src/LiteRT/LiteRT.csproj src/LiteRT.LM/LiteRT.LM.csproj
 
-      - name: Pack (managed)
+      - name: Pack
+        working-directory: litert-net
         run: |
-          dotnet pack --no-build -c Release -o artifacts src/LiteRT/LiteRT.csproj
-          dotnet pack --no-build -c Release -o artifacts src/LiteRT.LM/LiteRT.LM.csproj
+          for proj in \
+            src/LiteRT.Native/LiteRT.Native.csproj \
+            src/LiteRT.Gpu.Native/LiteRT.Gpu.Native.csproj \
+            src/LiteRT.LM.Native/LiteRT.LM.Native.csproj \
+            src/LiteRT/LiteRT.csproj \
+            src/LiteRT.LM/LiteRT.LM.csproj; do
+            dotnet pack -c Release -o artifacts "$proj"
+          done
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nupkg
-          path: artifacts/*.nupkg
+          path: litert-net/artifacts/*.nupkg

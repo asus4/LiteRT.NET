@@ -58,8 +58,6 @@ namespace LiteRT.LM.Interop
     {
         internal const string LibraryName = "LiteRtLmC";
 
-        static LiteRtLmNative() => NativeLibraryResolver.Register(typeof(LiteRtLmNative).Assembly);
-
         [DllImport(LibraryName)]
         internal static extern void litert_lm_set_min_log_level(int level);
 

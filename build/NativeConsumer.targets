@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    Auto-imported by NuGet (packed as build/<PackageId>.targets) when one of the
+    LiteRT.NET *.Native packages is consumed via PackageReference. Copies the host
+    RID's native files flat into the consumer's output directory for desktop
+    `dotnet build` + run. (`dotnet run` also gets runtimes/<rid>/native via
+    deps.json, but the flat copy keeps plain build output self-contained.)
+  -->
+  <PropertyGroup>
+    <_LiteRtArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_LiteRtArch>
+    <_LiteRtOS Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))">osx</_LiteRtOS>
+    <_LiteRtOS Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">win</_LiteRtOS>
+    <_LiteRtOS Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">linux</_LiteRtOS>
+    <LiteRtHostRid Condition="'$(LiteRtHostRid)' == ''">$(_LiteRtOS)-$(_LiteRtArch)</LiteRtHostRid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../runtimes/$(LiteRtHostRid)/native/*"
+          CopyToOutputDirectory="PreserveNewest"
+          Link="%(Filename)%(Extension)"
+          Visible="false" />
+  </ItemGroup>
+</Project>

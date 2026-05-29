@@ -34,12 +34,12 @@ jobs:
             rid: osx-arm64
     steps:
       - name: Checkout LiteRT.NET
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: litert-net
 
       - name: Checkout LiteRT-LM
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.LITERT_LM_REPO }}
           ref: ${{ env.LITERT_LM_REF }}
@@ -54,7 +54,7 @@ jobs:
           litert-net/native/litert-lm-c/build.sh "$GITHUB_WORKSPACE/litert-lm" "$GITHUB_WORKSPACE/out"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: libLiteRtLmC-${{ matrix.rid }}
           path: out/*

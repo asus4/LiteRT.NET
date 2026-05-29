@@ -5,6 +5,9 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/LiteRT.LM/LiteRT.LM.csproj" />
+    <Project Path="src/LiteRT.LM.Native/LiteRT.LM.Native.csproj" />
+    <Project Path="src/LiteRT.Native/LiteRT.Native.csproj" />
+    <Project Path="src/LiteRT.Gpu.Native/LiteRT.Gpu.Native.csproj" />
     <Project Path="src/LiteRT/LiteRT.csproj" />
   </Folder>
 </Solution>

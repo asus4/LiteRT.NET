@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>LiteRT.Gpu.Native</PackageId>
+    <Description>Optional GPU accelerator plugins (Metal / WebGpu / OpenCl) and matching samplers for LiteRT. Add alongside LiteRT.Native to enable GPU.</Description>
+
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>false</IncludeSymbols>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../build/NativeConsumer.targets" Pack="true" PackagePath="build/$(PackageId).targets" Visible="false" />
+  </ItemGroup>
+
+  <Import Project="../../build/Native.targets" />
+</Project>

@@ -16,7 +16,6 @@ namespace LiteRT
         public static LiteRtModel CreateFromFile(string path)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
-            NativeLibraryResolver.EnsureRegistered();
             LiteRtException.ThrowIfError(
                 LiteRtNative.LiteRtCreateModelFromFile(path, out var handle),
                 nameof(LiteRtNative.LiteRtCreateModelFromFile));

@@ -13,7 +13,6 @@ namespace LiteRT
 
         public LiteRtEnvironment()
         {
-            NativeLibraryResolver.EnsureRegistered();
             LiteRtException.ThrowIfError(
                 LiteRtNative.LiteRtCreateEnvironment(0, IntPtr.Zero, out _handle),
                 nameof(LiteRtNative.LiteRtCreateEnvironment));

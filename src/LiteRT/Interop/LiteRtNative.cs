@@ -81,8 +81,6 @@ namespace LiteRT.Interop
         // LiteRtLayout is 68 bytes (non-MSVC) or 72 (MSVC). 128 is a safe upper bound.
         internal const int RankedTensorTypeSize = 128;
 
-        static LiteRtNative() => NativeLibraryResolver.EnsureRegistered();
-
         [DllImport(LibraryName)]
         internal static extern IntPtr LiteRtGetStatusString(LiteRtStatus status);
 
