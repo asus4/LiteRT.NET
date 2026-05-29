@@ -89,3 +89,26 @@ there. It then loads via `LiteRtModel.CreateFromBuffer(byte[])`, which pins the 
 the model's lifetime (the C header requires the buffer stay valid; the runtime does not
 copy) and frees it on `Dispose`. Use `CreateFromBuffer` rather than `CreateFromFile`
 whenever no real file path exists.
+
+### Platform notes
+
+- **macOS Editor / Android** — work directly off the NuGetForUnity-imported natives
+  (`libLiteRt.dylib` / `libLiteRt.so`); Android loads the loose `.so` via the OS loader.
+- **iOS** — needs special handling: the iOS prebuilt is a *dynamic* `libLiteRt.dylib`, and
+  iOS can't consume a loose `.dylib` (a device build needs a code-signed, embedded
+  framework, otherwise Xcode fails with `library 'LiteRt' not found`). So:
+  - `native/make-ios-xcframework.sh` repackages the device + simulator dylibs into
+    `LiteRt.xcframework` (binary renamed `LiteRt`, install name
+    `@rpath/LiteRt.framework/LiteRt`) under `src/LiteRT.Unity/Plugins/iOS~/`. The `~`
+    suffix keeps Unity from importing it as a loose plugin (which is what caused the
+    `-lLiteRt` link error).
+  - The bare iOS dylib is excluded from the Unity project: the `ios`/`ios-arm64` entries
+    were removed from `NativeRuntimeSettings.json` so NuGetForUnity no longer extracts it.
+  - `LiteRT.Unity`'s Editor post-build hook (`LiteRtIosBuildProcessor`, an
+    `IPostprocessBuildWithReport`) copies the xcframework into the generated Xcode project,
+    links it into the `UnityFramework` target, and embeds + code-signs it in the main app
+    target. At runtime dyld already has the framework loaded, so the unchanged
+    `[DllImport("LiteRt")]` resolves it by leaf name — **no `__Internal`, no change to the
+    NuGet bindings**.
+  - After pulling these changes, **re-export the iOS project** (a stale export won't have
+    the xcframework), then rebuild in Xcode. Expect the same `[1.5811, 3.5355]` output.

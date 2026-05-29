@@ -60,6 +60,30 @@ namespace LiteRT
             }
         }
 
+        /// <summary>
+        /// Creates a model from caller-owned native memory, without pinning or copying. The runtime
+        /// references the buffer for the model's lifetime, so the memory at <paramref name="buffer"/>
+        /// must stay valid and immovable until the returned model is disposed. The caller owns the
+        /// memory — this method never frees it.
+        /// <para>
+        /// Use this to avoid the managed allocation of the <see cref="CreateFromBuffer(byte[])"/>
+        /// overload for large models. For example, Unity's
+        /// <c>NativeArray&lt;byte&gt;.ReadOnly</c> already lives in unmanaged memory; pass its
+        /// <c>NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr</c> here (the
+        /// <c>LiteRT.Unity</c> package wraps this in an extension method).
+        /// </para>
+        /// </summary>
+        public static unsafe LiteRtModel CreateFromBuffer(IntPtr buffer, int length)
+        {
+            if (buffer == IntPtr.Zero) throw new ArgumentNullException(nameof(buffer));
+            if (length <= 0) throw new ArgumentException("Model buffer is empty.", nameof(length));
+
+            LiteRtException.ThrowIfError(
+                LiteRtNative.LiteRtCreateModelFromBuffer((void*)buffer, (UIntPtr)length, out var handle),
+                nameof(LiteRtNative.LiteRtCreateModelFromBuffer));
+            return new LiteRtModel(handle);
+        }
+
         /// <summary>Number of signatures exposed by the model.</summary>
         public int SignatureCount
         {
