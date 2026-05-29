@@ -22,6 +22,7 @@
   <ItemGroup>
     <!-- Pack all RIDs into the package; never copy the full set to output. -->
     <None Include="$(MSBuildProjectDirectory)/runtimes/**"
+          Exclude="$(MSBuildProjectDirectory)/runtimes/.*;$(MSBuildProjectDirectory)/runtimes/**/.*;$(MSBuildProjectDirectory)/runtimes/**/.*/**"
           Pack="true"
           PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="Never"

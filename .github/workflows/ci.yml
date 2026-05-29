@@ -1,9 +1,11 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Disable auto triggers until stable version
+  # push:
+  #   branches: [main]
+  # pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -39,21 +41,20 @@ jobs:
 
       - name: Build (managed)
         working-directory: litert-net
-        run: dotnet build --no-restore -c Release src/LiteRT/LiteRT.csproj src/LiteRT.LM/LiteRT.LM.csproj
+        run: |
+          dotnet build --no-restore -c Release "src/LiteRT/LiteRT.csproj"
+          dotnet build --no-restore -c Release "src/LiteRT.LM/LiteRT.LM.csproj"
 
       - name: Pack
         working-directory: litert-net
         run: |
-          for proj in \
-            src/LiteRT.Native/LiteRT.Native.csproj \
-            src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj \
-            src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj \
-            src/LiteRT.Gpu.OpenCl.Native/LiteRT.Gpu.OpenCl.Native.csproj \
-            src/LiteRT.LM.Native/LiteRT.LM.Native.csproj \
-            src/LiteRT/LiteRT.csproj \
-            src/LiteRT.LM/LiteRT.LM.csproj; do
-            dotnet pack -c Release -o artifacts "$proj"
-          done
+          dotnet pack -c Release -o artifacts "src/LiteRT.Native/LiteRT.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.OpenCl.Native/LiteRT.Gpu.OpenCl.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.LM.Native/LiteRT.LM.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT/LiteRT.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.LM/LiteRT.LM.csproj"
 
       - name: Upload packages
         uses: actions/upload-artifact@v7
