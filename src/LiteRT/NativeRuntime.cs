@@ -41,7 +41,7 @@ namespace LiteRT
             return null;
         }
 
-        private static string HostRid()
+        internal static string HostRid()
         {
             string os =
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"

@@ -34,28 +34,14 @@ namespace LiteRT
                 if (libraryDir != null)
                 {
                     libraryDirPtr = Marshal.StringToCoTaskMemUTF8(libraryDir);
-                    options.Add(new LiteRtEnvOptionNative
-                    {
-                        Tag = (int)LiteRtEnvOptionTag.RuntimeLibraryDir,
-                        Value = new LiteRtAnyNative
-                        {
-                            Type = (int)LiteRtAnyType.String,
-                            Value = libraryDirPtr.ToInt64(),
-                        },
-                    });
+                    options.Add(Option(LiteRtEnvOptionTag.RuntimeLibraryDir,
+                        LiteRtAnyType.String, libraryDirPtr.ToInt64()));
                 }
 
                 if (autoRegisterAccelerators.HasValue)
                 {
-                    options.Add(new LiteRtEnvOptionNative
-                    {
-                        Tag = (int)LiteRtEnvOptionTag.AutoRegisterAccelerators,
-                        Value = new LiteRtAnyNative
-                        {
-                            Type = (int)LiteRtAnyType.Int,
-                            Value = (long)(int)autoRegisterAccelerators.Value,
-                        },
-                    });
+                    options.Add(Option(LiteRtEnvOptionTag.AutoRegisterAccelerators,
+                        LiteRtAnyType.Int, (int)autoRegisterAccelerators.Value));
                 }
 
                 var array = options.ToArray();
@@ -70,6 +56,13 @@ namespace LiteRT
                     Marshal.FreeCoTaskMem(libraryDirPtr);
                 }
             }
+
+            static LiteRtEnvOptionNative Option(LiteRtEnvOptionTag tag, LiteRtAnyType type, long value) =>
+                new LiteRtEnvOptionNative
+                {
+                    Tag = (int)tag,
+                    Value = new LiteRtAnyNative { Type = (int)type, Value = value },
+                };
         }
 
         internal IntPtr Handle => _handle;

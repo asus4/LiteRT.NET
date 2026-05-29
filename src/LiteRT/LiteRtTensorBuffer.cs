@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using LiteRT.Interop;
 
 namespace LiteRT
@@ -53,7 +54,7 @@ namespace LiteRT
         }
 
         public void Write(ReadOnlySpan<float> data) =>
-            Write(System.Runtime.InteropServices.MemoryMarshal.AsBytes(data));
+            Write(MemoryMarshal.AsBytes(data));
 
         /// <summary>Copies the buffer contents into <paramref name="destination"/>.</summary>
         public void Read(Span<byte> destination)
@@ -76,10 +77,8 @@ namespace LiteRT
 
         public float[] ReadFloats()
         {
-            var bytes = new byte[PackedByteSize];
-            Read(bytes);
-            var result = new float[bytes.Length / sizeof(float)];
-            Buffer.BlockCopy(bytes, 0, result, 0, result.Length * sizeof(float));
+            var result = new float[PackedByteSize / sizeof(float)];
+            Read(MemoryMarshal.AsBytes(result.AsSpan()));
             return result;
         }
 

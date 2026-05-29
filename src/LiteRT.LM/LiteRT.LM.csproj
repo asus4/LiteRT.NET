@@ -5,6 +5,7 @@
     <AssemblyName>LiteRT.LM</AssemblyName>
     <PackageId>LiteRT.LM.Managed</PackageId>
     <Description>C# bindings for Google LiteRT-LM (on-device LLM inference).</Description>
+    <IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0'">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

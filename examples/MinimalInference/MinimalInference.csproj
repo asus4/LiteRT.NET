@@ -5,6 +5,8 @@
     <RollForward>Major</RollForward>
     <RootNamespace>LiteRT.Examples.MinimalInference</RootNamespace>
     <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

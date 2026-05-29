@@ -16,13 +16,13 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 
 Managed packages target `netstandard2.1` (Unity / IL2CPP) and `net8.0`; their assembly
 names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
-`runtimes/<rid>/native` and resolve at runtime via the default .NET native-library
-search (deps.json `NATIVE_DLL_SEARCH_DIRECTORIES`) — no environment variable or custom
-resolver. GPU accelerators are an optional add-on; the base install is CPU only.
-Each GPU backend ships in its own package so a consumer references exactly one: the
-core registry's accelerator probe order is hardcoded in the prebuilt library and
-registers the first dylib present in the load path, so "which backend" == "which
-accelerator package is referenced".
+`runtimes/<rid>/native` that resolve through the default .NET native-library search
+(deps.json `NATIVE_DLL_SEARCH_DIRECTORIES`) — no environment variable or custom resolver.
+
+GPU support is optional (the base install is CPU only), and each backend ships in its own
+package so a consumer references exactly one. The core registry's probe order is hardcoded
+in the prebuilt library and registers the first accelerator dylib on the load path, so the
+active backend is simply whichever GPU package you reference.
 
 ## Native libraries
 
@@ -45,7 +45,7 @@ LITERT_RIDS=osx-arm64 native/fetch-natives.sh   # just the host RID
 
 The fetched binaries flow into the `dotnet` build output automatically (ProjectReference
 copy-to-output for examples; `runtimes/<rid>/native` + deps.json for NuGet consumers), so
-`[DllImport]` resolves with no environment variable.
+`[DllImport]` resolves at runtime.
 
 ## Examples
 

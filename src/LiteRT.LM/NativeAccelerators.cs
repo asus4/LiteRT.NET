@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using LiteRT;
 
 namespace LiteRT.LM
 {
@@ -81,23 +82,7 @@ namespace LiteRT.LM
         {
             string baseDir = AppContext.BaseDirectory;
             yield return baseDir;
-            yield return Path.Combine(baseDir, "runtimes", HostRid(), "native");
-        }
-
-        private static string HostRid()
-        {
-            string os =
-                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
-                : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx"
-                : "linux";
-            string arch = RuntimeInformation.OSArchitecture switch
-            {
-                Architecture.Arm64 => "arm64",
-                Architecture.X64 => "x64",
-                Architecture.X86 => "x86",
-                _ => RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant(),
-            };
-            return $"{os}-{arch}";
+            yield return Path.Combine(baseDir, "runtimes", NativeRuntime.HostRid(), "native");
         }
     }
 }
