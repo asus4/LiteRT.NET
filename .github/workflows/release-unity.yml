@@ -1,0 +1,97 @@
+name: release-unity
+
+# Packs and signs the Unity UPM packages (unity/LiteRT and unity/LiteRT.Unity) and
+# attaches the .tgz archives to a GitHub Release. OpenUPM consumes the release assets
+# (trackingMode: githubRelease), so the native binaries only need to exist in the
+# package folder at `upm pack` time — they stay .gitignore'd in the repo.
+#
+# Trigger: push a tag like `unity-v0.1.0-alpha`.
+#
+# Secrets (Unity service account with package-signing permission for the org):
+#   UPM_SERVICE_ACCOUNT_KEY_ID, UPM_SERVICE_ACCOUNT_KEY_SECRET, UPM_ORG_ID
+#
+# Reference: https://github.com/openupm/com.example.signed-upm
+
+on:
+  push:
+    tags:
+      - "unity-v*"
+  workflow_dispatch:
+    inputs:
+      litert_lm_ref:
+        description: "LiteRT-LM git ref to source prebuilt core natives from"
+        required: false
+        default: "main"
+
+permissions:
+  contents: write
+
+env:
+  LITERT_LM_REPO: google-ai-edge/LiteRT-LM
+  LITERT_LM_REF: ${{ github.event.inputs.litert_lm_ref || 'main' }}
+  DIST_DIR: /tmp/upm-dist
+
+jobs:
+  release:
+    name: Pack, sign and release Unity packages
+    # macOS so fetch-natives can build the iOS LiteRt.xcframework (needs xcodebuild).
+    runs-on: macos-14
+    env:
+      UPM_SERVICE_ACCOUNT_KEY_ID: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_ID }}
+      UPM_SERVICE_ACCOUNT_KEY_SECRET: ${{ secrets.UPM_SERVICE_ACCOUNT_KEY_SECRET }}
+      UPM_ORG_ID: ${{ secrets.UPM_ORG_ID }}
+    steps:
+      - name: Checkout LiteRT.NET
+        uses: actions/checkout@v6
+        with:
+          path: litert-net
+
+      # LiteRT-LM ships the prebuilt core (libLiteRt) under prebuilt/<platform>/, which
+      # fetch-natives.sh consumes for desktop + iOS (Android core comes from the SDK).
+      - name: Checkout LiteRT-LM (prebuilt core natives)
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.LITERT_LM_REPO }}
+          ref: ${{ env.LITERT_LM_REF }}
+          path: litert-lm
+
+      - name: Populate native libraries
+        working-directory: litert-net
+        env:
+          LITERT_LM_DIR: ${{ github.workspace }}/litert-lm
+        run: |
+          chmod +x scripts/*.sh
+          scripts/fetch-natives.sh            # -> src/LiteRT.Native/runtimes/<rid>/native
+          scripts/sync-unity-natives.sh       # -> unity/LiteRT/Plugins/<platform>
+          scripts/sync-unity-bindings.sh      # -> unity/LiteRT/Runtime/Bindings
+
+      - name: Verify the bindings synced clean (no drift)
+        working-directory: litert-net
+        run: git diff --exit-code unity/LiteRT/Runtime/Bindings
+
+      - name: Install Unity UPM CLI
+        run: |
+          curl -fsSL https://cdn.packages.unity.com/upm-cli/install.sh -o install.sh
+          bash install.sh
+          echo "$HOME/.upm/bin" >> "$GITHUB_PATH"
+
+      - name: Pack and sign packages
+        working-directory: litert-net
+        run: |
+          mkdir -p "$DIST_DIR"
+          upm pack ./unity/LiteRT       --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
+          upm pack ./unity/LiteRT.Unity --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
+
+      - name: List packed archives
+        run: |
+          ls -la "$DIST_DIR"
+          for a in "$DIST_DIR"/*.tgz; do
+            echo "--- $a"
+            tar -tzf "$a" | grep -E 'package/(package\.json|\.attestation\.p7m)$' || true
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            /tmp/upm-dist/*.tgz

@@ -12,7 +12,8 @@
 #
 # The xcframework.zip is consumed by:
 #   - .NET-for-iOS / MAUI: a build/net*-ios targets file (NativeReference) — deferred.
-#   - Unity: NuGetForUnity extracts the zip; LiteRtPostprocessBuild unzips + embeds it.
+#   - Unity: scripts/sync-unity-natives.sh copies it into unity/LiteRT/Plugins/iOS/;
+#     LiteRtPostprocessBuild unzips + embeds it into the Xcode project.
 #
 # Usage:
 #   scripts/make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR]

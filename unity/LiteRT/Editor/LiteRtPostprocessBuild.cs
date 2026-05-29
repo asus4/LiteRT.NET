@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -13,14 +12,13 @@ using UnityEditor.iOS.Xcode.Extensions;
 namespace LiteRT.Unity.Editor
 {
     /// <summary>
-    /// iOS post-build step for LiteRT. The LiteRT.Native NuGet package ships the iOS core as
-    /// <c>runtimes/ios/native/LiteRt.xcframework.zip</c> (a loose <c>.dylib</c> can't be
-    /// embedded/code-signed on iOS). NuGetForUnity extracts the zip as a plain asset, so here
+    /// iOS post-build step for LiteRT. This package ships the iOS core as
+    /// <c>Plugins/iOS/LiteRt.xcframework.zip</c> (a loose <c>.dylib</c> can't be
+    /// embedded/code-signed on iOS, and a <c>.xcframework</c> directory is easier to embed from a
+    /// zip than to manage as an imported plugin). Unity imports the zip as a plain asset, so here
     /// we unzip it into the generated Xcode project, link the framework into the UnityFramework
     /// target (so dyld loads it at launch and the bindings' iOS <c>[DllImport("__Internal")]</c>
     /// resolves its symbols), and embed + code-sign it in the main app target.
-    ///
-    /// Unity-only; the LiteRT NuGet packages are unaffected.
     /// </summary>
     public sealed class LiteRtPostprocessBuild : IPostprocessBuildWithReport
     {
@@ -48,8 +46,9 @@ namespace LiteRT.Unity.Editor
             if (zipPath == null)
             {
                 Debug.LogError(
-                    $"[LiteRT.Unity] '{ZipName}' not found under Assets/Packages — is the LiteRT.Native " +
-                    "NuGet package installed? The iOS app will fail to load LiteRT.");
+                    $"[LiteRT.Unity] '{ZipName}' not found in the package's Plugins/iOS folder — run " +
+                    "scripts/fetch-natives.sh + scripts/sync-unity-natives.sh to populate it. " +
+                    "The iOS app will fail to load LiteRT.");
                 return;
             }
 
@@ -92,14 +91,16 @@ namespace LiteRT.Unity.Editor
 
         private static string FindXcFrameworkZip()
         {
-            string packagesDir = Path.Combine(Application.dataPath, "Packages");
-            if (!Directory.Exists(packagesDir))
+            // The zip ships inside this package's Plugins/iOS folder. Resolve the package on disk
+            // (works for file:, registry, and Library/PackageCache installs).
+            var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(LiteRtPostprocessBuild).Assembly);
+            if (package == null)
             {
                 return null;
             }
 
-            return Directory.EnumerateFiles(packagesDir, ZipName, SearchOption.AllDirectories)
-                .FirstOrDefault(p => p.Replace('\\', '/').Contains("/runtimes/ios/native/"));
+            string zipPath = Path.Combine(package.resolvedPath, "Plugins", "iOS", ZipName);
+            return File.Exists(zipPath) ? zipPath : null;
         }
 #endif
     }

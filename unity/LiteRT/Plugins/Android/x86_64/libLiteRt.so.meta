@@ -1,0 +1,52 @@
+fileFormatVersion: 2
+guid: 70755f3a80bb476faeec463ce5277d7d
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 3
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 0
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+    Android:
+      enabled: 1
+      settings:
+        CPU: X86_64
+        Is16KbAligned: true
+    Any:
+      enabled: 0
+      settings:
+        'Exclude ': 1
+        Exclude Android: 1
+        Exclude Editor: 1
+        Exclude Linux64: 1
+        Exclude OSXUniversal: 1
+        Exclude Win: 1
+        Exclude Win64: 1
+        Exclude WindowsStoreApps: 1
+        Exclude iOS: 1
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    Linux64:
+      enabled: 0
+      settings: {}
+    OSXUniversal:
+      enabled: 0
+      settings: {}
+    Win:
+      enabled: 0
+      settings: {}
+    Win64:
+      enabled: 0
+      settings: {}
+    iOS:
+      enabled: 0
+      settings: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

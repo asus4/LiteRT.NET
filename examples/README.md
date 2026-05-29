@@ -44,84 +44,75 @@ which yields correct output.
 ## MinimalInferenceUnity (LiteRT core, in Unity)
 
 Unity 6 (`6000.3.11f1`) port of MinimalInference at `examples/MinimalInferenceUnity`.
-Consumes the NuGet packages from the repo's `artifacts/` folder via **NuGetForUnity**
-(`com.github-glitchenzo.nugetforunity`), plus the `LiteRT.Unity` UPM package (`src/LiteRT.Unity`).
+Consumes the two Unity UPM packages by local `file:` reference (`Packages/manifest.json`):
+`com.github.asus4.litert` (`unity/LiteRT`) and `com.github.asus4.litert.unity`
+(`unity/LiteRT.Unity`). **No NuGetForUnity** — the packages are self-contained.
 Verified end-to-end on the macOS Editor (Apple Silicon, CPU).
 
 ### Setup
 
-1. Populate natives + build the iOS xcframework, then pack: `scripts/fetch-natives.sh`
-   (runs `scripts/make-ios-xcframework.sh` → `src/LiteRT.Native/runtimes/ios/native/LiteRt.xcframework.zip`),
-   then `dotnet pack -c Release -o artifacts src/LiteRT.Native/LiteRT.Native.csproj`.
-2. `Assets/NuGet.config` adds a local source: `<add key="litert-local" value="../../../artifacts" />`
-   (path is relative to the `Assets/` dir holding NuGet.config). NuGetForUnity caches
-   `NuGet.config` at Editor startup, so after editing it force a domain reload (recompile)
-   before restoring, or it won't see the new source.
-3. Install **`LiteRT.Native`** (the per-platform native runtimes). The managed **bindings are
-   NOT consumed from NuGet in Unity** — they're compiled from source in `LiteRT.Unity` (see
-   below), so `LiteRT.Managed` is intentionally absent from `packages.config`.
+`unity/LiteRT` ships its native libraries under `Plugins/`, but the binaries are
+`.gitignore`'d (only the `.meta` files are committed). Populate them before opening the
+project:
 
-   Local-dev gotcha: NuGetForUnity caches packages at `~/.local/share/NuGet/Cache/`. If you
-   re-`pack` the **same version** in place, clear that cached `.nupkg` (and delete
-   `Assets/Packages/LiteRT.Native.*`) before restoring, or it reinstalls the stale copy
-   (e.g. missing the iOS zip). Fresh consumers of a published version aren't affected.
+1. `scripts/fetch-natives.sh` — fetches/builds the core natives into
+   `src/LiteRT.Native/runtimes/<rid>/native` (on macOS it also builds the iOS
+   `LiteRt.xcframework.zip` via `scripts/make-ios-xcframework.sh`).
+2. `scripts/sync-unity-natives.sh` — copies those into `unity/LiteRT/Plugins/<platform>`.
+3. `scripts/sync-unity-bindings.sh` — copies the C# bindings from `src/LiteRT` into
+   `unity/LiteRT/Runtime/Bindings` (re-run after editing the bindings; CI diffs to catch drift).
 
-### Apple Silicon plugin gotcha
-
-NuGetForUnity's default `NativeRuntimeSettings` marks `osx-x64` as the Editor variant and
-leaves `osx-arm64` runtime-only — backwards for an Apple Silicon Editor, so
-`libLiteRt.dylib` won't load. Fix is committed at
-`ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/NativeRuntimeSettings.json`:
-`osx-arm64` set to Editor `OS=OSX, CPU=ARM64`, `osx-x64` left build-only. The resulting
-`.dylib.meta` shows `Editor: enabled=1, CPU=ARM64, OS=OSX`.
+Then open `examples/MinimalInferenceUnity` in Unity. The committed `.meta` files set the
+correct platform/CPU per binary — including the Apple-Silicon Editor variant for macOS
+(`Editor: enabled=1, CPU=ARM64, OS=OSX`) — so no manual plugin import-setting fixes are
+needed.
 
 ### Bindings are compiled from source in Unity
 
-The `LiteRT.Unity` UPM package (`Packages/manifest.json` →
-`"com.github.asus4.litert": "file:../../../src/LiteRT.Unity"`) ships the LiteRT C# bindings
-as **source** (`src/LiteRT.Unity/Runtime/Bindings/`, synced from `src/LiteRT` by
-`scripts/sync-unity-bindings.sh`), compiled into the **`LiteRT.Managed`** assembly (the asmdef
-is named `LiteRT.Managed`, not `LiteRT`, to avoid colliding with the Windows native
-`LiteRt.dll`). Source — not the prebuilt NuGet DLL — is required so the iOS
+`unity/LiteRT/Runtime/Bindings/` holds the LiteRT C# bindings as **source** (synced from
+`src/LiteRT` by `scripts/sync-unity-bindings.sh`), compiled into the **`LiteRT.Managed`**
+assembly (asmdef named `LiteRT.Managed`, not `LiteRT`, to avoid colliding with the Windows
+native `LiteRt.dll`). Source — not the prebuilt NuGet DLL — is required so the iOS
 `#if __IOS__ || (UNITY_IOS && !UNITY_EDITOR)` in `LiteRtNative.cs` resolves the P/Invoke
 target to `"__Internal"` (a precompiled DLL bakes `"LiteRt"` and can't switch). The
 conditional is inert for `dotnet build`, so the NuGet packages are unaffected.
 
 Under Unity, `[DllImport("LiteRt")]` (non-iOS) resolves through Unity's plugin system (the
-imported `.dylib`/`.so`), **not** the deps.json `runtimes/<rid>/native` search the .NET CLI
-uses. `LiteRt.Unity`'s `LiteRtNativeLibrary` runs at `[RuntimeInitializeOnLoadMethod]`, finds
-`Assets/Packages/LiteRT.Native.*/runtimes/<rid>/native`, and sets the public
+imported `.dylib`/`.so`/`.dll`), **not** the deps.json `runtimes/<rid>/native` search the
+.NET CLI uses. `LiteRtNativeLibrary` (in `unity/LiteRT`) runs at
+`[RuntimeInitializeOnLoadMethod]`, resolves this package's `Plugins/<platform>` directory via
+`UnityEditor.PackageManager.PackageInfo`, and sets the public
 `LiteRtRuntime.NativeLibraryDirectory` hook (consulted first by
 `NativeRuntime.ResolveLibraryDirectory()`) so the runtime can `dlopen` accelerator plugins by
 absolute path. Harmless for CPU; required for GPU.
 
-The sample MonoBehaviour (`Assets/Scripts/MinimalInferenceBehaviour.cs`) reads the model
-from `StreamingAssets` with `UnityWebRequest` (modern `async Awaitable` + `await
-SendWebRequest()`). This is cross-platform: Android's `StreamingAssets` lives inside the
-APK at a `jar:file://…!/assets/…` URL — not a real path, so `File.Exists`/a file path fail
-there. It then loads via `LiteRtModel.CreateFromBuffer(byte[])`, which pins the buffer for
-the model's lifetime (the C header requires the buffer stay valid; the runtime does not
-copy) and frees it on `Dispose`. Use `CreateFromBuffer` rather than `CreateFromFile`
-whenever no real file path exists.
+### Model loading
+
+`LiteRtModelLoader` (in `com.github.asus4.litert.unity`) handles loading. The sample
+MonoBehaviour (`Assets/Scripts/MinimalInferenceBehaviour.cs`) reads the model from
+`StreamingAssets` with `UnityWebRequest` (modern `async Awaitable` + `await
+SendWebRequest()`). This is cross-platform: Android's `StreamingAssets` lives inside the APK
+at a `jar:file://…!/assets/…` URL — not a real path, so `File.Exists`/a file path fail there.
+The loader then uses `LiteRtModel.CreateFromBuffer`, which references the buffer for the
+model's lifetime (the C header requires the buffer stay valid; the runtime does not copy) and
+frees it on `Dispose`. Use `CreateFromBuffer` rather than `CreateFromFile` whenever no real
+file path exists.
 
 ### Platform notes
 
-- **macOS Editor / Android** — work directly off the NuGetForUnity-imported natives
-  (`libLiteRt.dylib` / `libLiteRt.so`); Android loads the loose `.so` via the OS loader.
+- **macOS Editor / Android** — load directly off the `Plugins/` natives
+  (`libLiteRt.dylib` / `libLiteRt.so`); the committed `.meta` enables the right platform/CPU.
   The iOS `#if` in `LiteRtNative.cs` is not taken, so these use `[DllImport("LiteRt")]`.
 - **iOS** — the prebuilt is a *dynamic* `libLiteRt.dylib`; iOS can't consume a loose
   `.dylib` (a device build needs a code-signed, embedded framework — otherwise Xcode fails
   with `library 'LiteRt' not found`). Two pieces work together:
   - **Delivery**: `scripts/make-ios-xcframework.sh` repackages the device + simulator dylibs
     into `LiteRt.xcframework` (binary renamed `LiteRt`, install name
-    `@rpath/LiteRt.framework/LiteRt`), zips it, and `LiteRT.Native` ships it at
-    `runtimes/ios/native/LiteRt.xcframework.zip` (matching `Microsoft.ML.OnnxRuntime`).
-    `ios` is in the project's `NativeRuntimeSettings.json`, so NuGetForUnity extracts the
-    zip as a plain asset (a `.zip` isn't a `PluginImporter`, so NuGetForUnity leaves it
-    alone — no `-lLiteRt` auto-link error). `LiteRtPostprocessBuild` (an
-    `IPostprocessBuildWithReport`) finds the zip under `Assets/Packages`, unzips it into the
-    Xcode project, links it into `UnityFramework`, and embeds + code-signs it in the main app
-    target.
+    `@rpath/LiteRt.framework/LiteRt`), zips it, and it ships at
+    `unity/LiteRT/Plugins/iOS/LiteRt.xcframework.zip`. A `.zip` isn't a `PluginImporter`, so
+    Unity imports it as a plain asset (no `-lLiteRt` auto-link error). `LiteRtPostprocessBuild`
+    (an `IPostprocessBuildWithReport`) finds the zip in the package, unzips it into the Xcode
+    project, links it into `UnityFramework`, and embeds + code-signs it in the main app target.
   - **Symbol resolution**: with the framework linked (loaded at launch), the iOS
     `[DllImport("__Internal")]` (from the source-compiled bindings) resolves the symbols via
     `dlsym(RTLD_DEFAULT)`. (A named `dlopen("LiteRt")` does *not* find an embedded framework

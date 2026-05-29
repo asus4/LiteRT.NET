@@ -12,7 +12,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$REPO_ROOT/src/LiteRT"
-DST="$REPO_ROOT/src/LiteRT.Unity/Runtime/Bindings"
+DST="$REPO_ROOT/unity/LiteRT/Runtime/Bindings"
 
 mkdir -p "$DST/Interop"
 

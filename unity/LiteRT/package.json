@@ -1,0 +1,17 @@
+{
+  "name": "com.github.asus4.litert",
+  "version": "0.1.0-alpha",
+  "displayName": "LiteRT",
+  "description": "C#/.NET bindings for LiteRT and CPU native runtime",
+  "unity": "2022.3",
+  "keywords": [
+    "ai",
+    "litert",
+    "tflite",
+    "tensorflow",
+    "machine-learning"
+  ],
+  "author": {
+    "name": "Koki Ibukuro"
+  }
+}

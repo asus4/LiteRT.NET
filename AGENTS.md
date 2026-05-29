@@ -13,7 +13,8 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 | `LiteRT.Gpu.OpenCl.Native` | Optional OpenCL / GL GPU accelerator (Android). |
 | `LiteRT.LM.Managed` | Managed bindings for the LiteRT-LM C API (`c/engine.h`). Depends on `LiteRT.LM.Native` and `LiteRT.Managed`. |
 | `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin) for all RIDs. |
-| `LiteRT.Unity` (UPM) | Unity-only glue. **Not** a NuGet package — a UPM package at `src/LiteRT.Unity` (`com.github.asus4.litert`). Resolves the native plugin directory and feeds it to `LiteRT.LiteRtRuntime.NativeLibraryDirectory` so the runtime can `dlopen` accelerator plugins by absolute path under Unity. Used alongside the `LiteRT.Managed` / `LiteRT.Native` NuGet packages installed via NuGetForUnity. |
+| `com.github.asus4.litert` (UPM) | Unity core package at `unity/LiteRT`. **Not** a NuGet package. Self-contained: the C# bindings are compiled from source (synced from `src/LiteRT` so the iOS `__Internal` P/Invoke conditional resolves) **and** the CPU core native runtime ships in `Plugins/`. No NuGetForUnity. |
+| `com.github.asus4.litert.unity` (UPM) | Unity utilities package at `unity/LiteRT.Unity`. Optional helpers (`LiteRtModelLoader`); depends on `com.github.asus4.litert`. |
 
 Managed packages target `netstandard2.1` (Unity / IL2CPP) and `net8.0`; their assembly
 names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
@@ -23,7 +24,9 @@ names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
 GPU support is optional (the base install is CPU only), and each backend ships in its own
 package so a consumer references exactly one. The core registry's probe order is hardcoded
 in the prebuilt library and registers the first accelerator dylib on the load path, so the
-active backend is simply whichever GPU package you reference.
+active backend is simply whichever GPU package you reference. The decoded order (and a
+caveat: the OpenCl package currently ships two candidate dylibs, only the first of which
+wins) is documented in [`docs/gpu-accelerator-probe-order.md`](docs/gpu-accelerator-probe-order.md).
 
 ## Native libraries
 
@@ -52,8 +55,8 @@ copy-to-output for examples; `runtimes/<rid>/native` + deps.json for NuGet consu
 
 Runnable samples live under `examples/` (`MinimalInference`, `SimpleLlm`, and the Unity
 sample `MinimalInferenceUnity`). See **`examples/README.md`** for how to run them, the GPU
-accelerator notes, and the Unity setup (NuGetForUnity, the Apple-Silicon plugin fix, and
-how natives + model loading work under Unity).
+accelerator notes, and the Unity setup (the `unity/` UPM packages, populating their natives
+with the sync scripts, and how model loading works under Unity).
 
 ## Repository layout
 
@@ -65,11 +68,14 @@ src/LiteRT.Gpu.Metal.Native/   Optional Metal GPU accelerator package (Apple)
 src/LiteRT.Gpu.WebGpu.Native/  Optional WebGPU accelerator package (desktop + Android)
 src/LiteRT.Gpu.OpenCl.Native/  Optional OpenCL/GL accelerator package (Android)
 src/LiteRT.LM.Native/   LM native runtime package
-src/LiteRT.Unity/       Unity UPM package (com.github.asus4.litert): native-dir resolution glue
+unity/LiteRT/           Unity core UPM package (com.github.asus4.litert): bindings synced from
+                        src/LiteRT (Runtime/Bindings) + CPU core natives (Plugins) + iOS embed (Editor)
+unity/LiteRT.Unity/     Unity utilities UPM package (com.github.asus4.litert.unity): LiteRtModelLoader
 build/                  Shared MSBuild logic for the Native packages
 examples/               Runnable samples (see examples/README.md)
-examples/MinimalInferenceUnity/  Unity 6 sample consuming the NuGet packages via NuGetForUnity
+examples/MinimalInferenceUnity/  Unity 6 sample consuming the unity/ UPM packages via file: refs
 scripts/                Build/dev automation: fetch-natives.sh (populate runtimes),
-                        make-ios-xcframework.sh, sync-unity-bindings.sh, litert-lm-c/ (Bazel)
+                        sync-unity-natives.sh (runtimes -> unity/LiteRT/Plugins),
+                        sync-unity-bindings.sh, make-ios-xcframework.sh, litert-lm-c/ (Bazel)
 .github/workflows/      CI (managed) and native build matrix
 ```

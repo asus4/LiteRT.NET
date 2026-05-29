@@ -76,29 +76,33 @@ namespace LiteRT.Unity
 
         private async ValueTask<LiteRtModel> LoadFromUrlAsync(string url, CancellationToken cancellationToken)
         {
-            try
+            // Download on the main thread (UnityWebRequest is main-thread only), and copy the
+            // bytes into a persistent buffer this loader owns so the model can reference them
+            // after the request is disposed.
+            using (var request = UnityWebRequest.Get(url))
             {
-                using (var request = UnityWebRequest.Get(url))
+                await request.SendWebRequest();
+                cancellationToken.ThrowIfCancellationRequested();
+                if (request.result != UnityWebRequest.Result.Success)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (request.result != UnityWebRequest.Result.Success)
-                    {
-                        throw new IOException($"Failed to load model from '{url}': {request.error}");
-                    }
-
-                    var src = request.downloadHandler.nativeData;
-                    if (src.Length == 0)
-                    {
-                        throw new InvalidDataException($"Model is empty: '{url}'");
-                    }
-
-                    await Awaitable.BackgroundThreadAsync();
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    data = new NativeArray<byte>(src.Length, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-                    src.CopyTo(data);
+                    throw new IOException($"Failed to load model from '{url}': {request.error}");
                 }
 
+                var src = request.downloadHandler.nativeData;
+                if (src.Length == 0)
+                {
+                    throw new InvalidDataException($"Model is empty: '{url}'");
+                }
+
+                data = new NativeArray<byte>(src.Length, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+                src.CopyTo(data);
+            }
+
+            // Run the slow native parse off the main thread.
+            await Awaitable.BackgroundThreadAsync();
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
                 unsafe
                 {
                     void* ptr = NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data);
