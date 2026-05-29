@@ -8,9 +8,9 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 | --- | --- |
 | `LiteRT.Managed` | Managed bindings for the LiteRT core C API (`litert/c/*.h`). Hand-written P/Invoke. Depends on `LiteRT.Native`. |
 | `LiteRT.Native` | Native LiteRT core runtime (`libLiteRt`) for all RIDs. CPU only. |
-| `LiteRT.Gpu.Native` | Optional GPU accelerators (Metal / WebGpu / OpenCl) + samplers. Add alongside `LiteRT.Native`. |
+| `LiteRT.Gpu.Native` | Optional core GPU accelerators / delegates (Metal / WebGpu / OpenCl). Add alongside `LiteRT.Native`. |
 | `LiteRT.LM.Managed` | Managed bindings for the LiteRT-LM C API (`c/engine.h`). Depends on `LiteRT.LM.Native` and `LiteRT.Managed`. |
-| `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin) for all RIDs. |
+| `LiteRT.LM.Native` | Native LiteRT-LM runtime (`libLiteRtLmC` + Gemma constraint plugin + TopK GPU samplers) for all RIDs. |
 
 Managed packages target `netstandard2.1` (Unity / IL2CPP) and `net8.0`; their assembly
 names stay `LiteRT` / `LiteRT.LM`. Native packages carry per-RID binaries under
@@ -52,10 +52,16 @@ LITERT_RIDS=osx-arm64 native/fetch-natives.sh
 ### MinimalInference (LiteRT core)
 
 ```bash
-dotnet run --project examples/MinimalInference
+dotnet run --project examples/MinimalInference                       # CPU (default)
+dotnet run --project examples/MinimalInference -- <model.tflite> gpu  # GPU
 ```
 
-Loads a small `.tflite` model, runs CPU inference, and prints the output tensor.
+Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
+argument selects the accelerator (`cpu` or `gpu`). GPU requires the `LiteRT.Gpu.Native`
+package (referenced by this example) so the accelerator dylibs sit beside the core
+library; `LiteRtEnvironment` sets the `RuntimeLibraryDir` option so the runtime can load
+them, and limits auto-registration to the requested accelerators (a CPU-only run stays
+quiet instead of warning about absent GPU/NPU plugins).
 
 ### SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
 

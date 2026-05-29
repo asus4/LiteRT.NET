@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using LiteRT.Interop;
 
 namespace LiteRT
@@ -11,11 +13,63 @@ namespace LiteRT
     {
         private IntPtr _handle;
 
-        public LiteRtEnvironment()
+        /// <param name="autoRegisterAccelerators">
+        /// Which hardware accelerators the environment auto-registers (and probes plugins for)
+        /// at creation. When <c>null</c> the runtime registers all supported accelerators,
+        /// which on a CPU-only install logs warnings for the missing GPU/NPU plugins. Pass
+        /// <see cref="LiteRtHwAccelerators.Cpu"/> for a quiet CPU-only environment, or include
+        /// <see cref="LiteRtHwAccelerators.Gpu"/> to enable the GPU accelerator (requires the
+        /// LiteRT.Gpu.Native package so the accelerator dylibs sit beside the core library).
+        /// </param>
+        public LiteRtEnvironment(LiteRtHwAccelerators? autoRegisterAccelerators = null)
         {
-            LiteRtException.ThrowIfError(
-                LiteRtNative.LiteRtCreateEnvironment(0, IntPtr.Zero, out _handle),
-                nameof(LiteRtNative.LiteRtCreateEnvironment));
+            var options = new List<LiteRtEnvOptionNative>();
+
+            // Tell the runtime where the accelerator plugins live so it can dlopen them by
+            // absolute path; otherwise it tries a bare filename the OS loader can't resolve.
+            string? libraryDir = NativeRuntime.ResolveLibraryDirectory();
+            IntPtr libraryDirPtr = IntPtr.Zero;
+            try
+            {
+                if (libraryDir != null)
+                {
+                    libraryDirPtr = Marshal.StringToCoTaskMemUTF8(libraryDir);
+                    options.Add(new LiteRtEnvOptionNative
+                    {
+                        Tag = (int)LiteRtEnvOptionTag.RuntimeLibraryDir,
+                        Value = new LiteRtAnyNative
+                        {
+                            Type = (int)LiteRtAnyType.String,
+                            Value = libraryDirPtr.ToInt64(),
+                        },
+                    });
+                }
+
+                if (autoRegisterAccelerators.HasValue)
+                {
+                    options.Add(new LiteRtEnvOptionNative
+                    {
+                        Tag = (int)LiteRtEnvOptionTag.AutoRegisterAccelerators,
+                        Value = new LiteRtAnyNative
+                        {
+                            Type = (int)LiteRtAnyType.Int,
+                            Value = (long)(int)autoRegisterAccelerators.Value,
+                        },
+                    });
+                }
+
+                var array = options.ToArray();
+                LiteRtException.ThrowIfError(
+                    LiteRtNative.LiteRtCreateEnvironment(array.Length, array, out _handle),
+                    nameof(LiteRtNative.LiteRtCreateEnvironment));
+            }
+            finally
+            {
+                if (libraryDirPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeCoTaskMem(libraryDirPtr);
+                }
+            }
         }
 
         internal IntPtr Handle => _handle;

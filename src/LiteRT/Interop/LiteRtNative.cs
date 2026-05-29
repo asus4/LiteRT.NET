@@ -43,6 +43,48 @@ namespace LiteRT.Interop
         ReadWrite = 2,
     }
 
+    /// <summary>Environment option tags (litert_environment_options.h).</summary>
+    public enum LiteRtEnvOptionTag
+    {
+        RuntimeLibraryDir = 22,
+        AutoRegisterAccelerators = 24,
+    }
+
+    /// <summary>Value type held by a <c>LiteRtAny</c> (litert_any.h).</summary>
+    public enum LiteRtAnyType
+    {
+        None = 0,
+        Bool = 1,
+        Int = 2,
+        Real = 3,
+        String = 8,
+        VoidPtr = 9,
+    }
+
+    /// <summary>
+    /// Blittable mirror of <c>LiteRtAny</c> (litert_any.h): a 4-byte type tag,
+    /// 4 bytes padding, then an 8-byte union value (holds an int64, double, or pointer).
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct LiteRtAnyNative
+    {
+        public int Type;
+        private int _padding;
+        public long Value;
+    }
+
+    /// <summary>
+    /// Blittable mirror of <c>LiteRtEnvOption</c> (litert_environment_options.h):
+    /// a 4-byte tag, 4 bytes padding, then a 16-byte <see cref="LiteRtAnyNative"/> value.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct LiteRtEnvOptionNative
+    {
+        public int Tag;
+        private int _padding;
+        public LiteRtAnyNative Value;
+    }
+
     /// <summary>Element type of a tensor (litert_model_types.h).</summary>
     public enum LiteRtElementType
     {
@@ -87,7 +129,7 @@ namespace LiteRT.Interop
         // --- Environment ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateEnvironment(
-            int num_options, IntPtr options, out IntPtr environment);
+            int num_options, [In] LiteRtEnvOptionNative[] options, out IntPtr environment);
 
         [DllImport(LibraryName)]
         internal static extern void LiteRtDestroyEnvironment(IntPtr environment);

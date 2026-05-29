@@ -8,17 +8,23 @@ string modelPath = args.Length > 0
     ? args[0]
     : Path.Combine(AppContext.BaseDirectory, "models", "sqrt_mean_mul_ops.tflite");
 
+// Second arg picks the accelerator: "cpu" (default) or "gpu".
+string acceleratorArg = args.Length > 1 ? args[1].ToLowerInvariant() : "cpu";
+var accelerator = acceleratorArg == "gpu" ? LiteRtHwAccelerators.Gpu : LiteRtHwAccelerators.Cpu;
+
 if (!File.Exists(modelPath))
 {
     Console.Error.WriteLine($"Model not found: {modelPath}");
     return 1;
 }
 
-Console.WriteLine($"Loading model: {modelPath}");
+Console.WriteLine($"Loading model: {modelPath} (accelerator: {accelerator})");
 
-using var env = new LiteRtEnvironment();
+// Auto-register CPU plus whatever the compiled model needs. Limiting the set keeps a
+// CPU-only run from probing (and warning about) GPU/NPU plugins it won't use.
+using var env = new LiteRtEnvironment(LiteRtHwAccelerators.Cpu | accelerator);
 using var model = LiteRtModel.CreateFromFile(modelPath);
-using var compiled = new LiteRtCompiledModel(env, model, LiteRtHwAccelerators.Cpu);
+using var compiled = new LiteRtCompiledModel(env, model, accelerator);
 
 var signature = model.GetSignature(0);
 Console.WriteLine($"Signature[0]: {signature.InputCount} input(s), {signature.OutputCount} output(s)");

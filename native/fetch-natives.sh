@@ -3,14 +3,14 @@
 #
 # Layout produced (relative to repo root):
 #   src/LiteRT.Native/runtimes/<rid>/native/      core libLiteRt
-#   src/LiteRT.Gpu.Native/runtimes/<rid>/native/  GPU accelerators + samplers
-#   src/LiteRT.LM.Native/runtimes/<rid>/native/   libLiteRtLmC + Gemma constraint plugin
+#   src/LiteRT.Gpu.Native/runtimes/<rid>/native/  core GPU accelerators (Metal/WebGpu/OpenCl)
+#   src/LiteRT.LM.Native/runtimes/<rid>/native/   libLiteRtLmC + Gemma plugin + LM GPU samplers
 #
 # These directories are .gitignore'd; binaries ship only inside NuGet packages
 # and on GitHub Release pages. Run this before `dotnet pack`/`dotnet run`.
 #
 # Sources (best-effort; missing pieces are warned, not fatal):
-#   - LiteRT-LM/prebuilt/<platform>/  : desktop+iOS core, GPU accel/samplers, Gemma plugin
+#   - LiteRT-LM/prebuilt/<platform>/  : desktop+iOS core, GPU accelerators, LM samplers, Gemma plugin
 #   - $LITERT_LM_OUT (default: out/)  : locally built libLiteRtLmC (+ Gemma) for the host RID
 #   - official LiteRT SDK             : core for RIDs not covered by prebuilt (e.g. Android)
 #
@@ -48,12 +48,17 @@ prebuilt_platform() {
 }
 
 # Classify a native file by basename: core | gpu | lm | skip
+#
+# *Accelerator are core LiteRT GPU delegates (used by LiteRT.Managed for .tflite
+# GPU inference). *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM
+# decode-time plugins, so they ship with the LM stack, not the core GPU package.
 classify() {
     case "$1" in
         libLiteRt.dylib|libLiteRt.so|libLiteRt.dll|LiteRt.dll) echo "core" ;;
         libLiteRtLmC.*|LiteRtLmC.*)                            echo "lm" ;;
         *GemmaModelConstraintProvider*)                        echo "lm" ;;
-        *Accelerator.*|*Sampler.*)                             echo "gpu" ;;
+        *Sampler.*)                                            echo "lm" ;;
+        *Accelerator.*)                                        echo "gpu" ;;
         *)                                                     echo "skip" ;;
     esac
 }
@@ -73,6 +78,17 @@ place_file() {
     local src="$1" rid="$2"
     local base; base="$(basename "$src")"
     case "$base" in *.lib|BUILD) return 0 ;; esac
+
+    # Apple platforms use Metal. The macOS prebuilt also ships WebGPU libs, but the
+    # core GPU registry probes WebGPU before Metal on desktop and registers the first
+    # that loads, so a present WebGPU accelerator would shadow Metal. Drop WebGPU on
+    # Apple RIDs (accelerator + sampler) to make Metal the initial accelerator and
+    # match iOS, which ships Metal-only.
+    case "$rid" in
+        osx-*|ios-*|iossimulator-*)
+            case "$base" in *WebGpu*) return 0 ;; esac
+            ;;
+    esac
 
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
