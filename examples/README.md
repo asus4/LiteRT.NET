@@ -6,7 +6,7 @@ layout, native-library story, and build details.
 First populate the host RID's natives once (see root `AGENTS.md` for `fetch-natives.sh`):
 
 ```bash
-LITERT_RIDS=osx-arm64 native/fetch-natives.sh
+scripts/fetch-natives.sh
 ```
 
 ## MinimalInference (LiteRT core)
@@ -27,10 +27,10 @@ GPU/NPU plugins).
 ## SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
 
 ```bash
-# Build the LM native library once (Bazel; see native/litert-lm-c/build.sh):
-native/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
+# Build the LM native library once (Bazel; see scripts/litert-lm-c/build.sh):
+scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
 # Then fetch-natives.sh copies it (and the Gemma plugin) into LiteRT.LM.Native:
-LITERT_RIDS=osx-arm64 native/fetch-natives.sh
+scripts/fetch-natives.sh
 
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
@@ -50,13 +50,21 @@ Verified end-to-end on the macOS Editor (Apple Silicon, CPU).
 
 ### Setup
 
-1. `dotnet pack -c Release -o artifacts src/LiteRT/LiteRT.csproj` (+ `LiteRT.Native`) so the
-   `.nupkg`s exist in `artifacts/`.
+1. Populate natives + build the iOS xcframework, then pack: `scripts/fetch-natives.sh`
+   (runs `scripts/make-ios-xcframework.sh` → `src/LiteRT.Native/runtimes/ios/native/LiteRt.xcframework.zip`),
+   then `dotnet pack -c Release -o artifacts src/LiteRT.Native/LiteRT.Native.csproj`.
 2. `Assets/NuGet.config` adds a local source: `<add key="litert-local" value="../../../artifacts" />`
    (path is relative to the `Assets/` dir holding NuGet.config). NuGetForUnity caches
    `NuGet.config` at Editor startup, so after editing it force a domain reload (recompile)
    before restoring, or it won't see the new source.
-3. Install `LiteRT.Managed` (pulls `LiteRT.Native`) → extracted to `Assets/Packages/`.
+3. Install **`LiteRT.Native`** (the per-platform native runtimes). The managed **bindings are
+   NOT consumed from NuGet in Unity** — they're compiled from source in `LiteRT.Unity` (see
+   below), so `LiteRT.Managed` is intentionally absent from `packages.config`.
+
+   Local-dev gotcha: NuGetForUnity caches packages at `~/.local/share/NuGet/Cache/`. If you
+   re-`pack` the **same version** in place, clear that cached `.nupkg` (and delete
+   `Assets/Packages/LiteRT.Native.*`) before restoring, or it reinstalls the stale copy
+   (e.g. missing the iOS zip). Fresh consumers of a published version aren't affected.
 
 ### Apple Silicon plugin gotcha
 
@@ -67,19 +75,25 @@ leaves `osx-arm64` runtime-only — backwards for an Apple Silicon Editor, so
 `osx-arm64` set to Editor `OS=OSX, CPU=ARM64`, `osx-x64` left build-only. The resulting
 `.dylib.meta` shows `Editor: enabled=1, CPU=ARM64, OS=OSX`.
 
-### How natives + model loading work under Unity
+### Bindings are compiled from source in Unity
 
-The `LiteRT.Unity` UPM package is referenced via `Packages/manifest.json`
-(`"com.github.asus4.litert": "file:../../../src/LiteRT.Unity"`). Its `LiteRtNativeLibrary`
-runs at `[RuntimeInitializeOnLoadMethod]`, finds
-`Assets/Packages/LiteRT.Native.*/runtimes/<rid>/native`, and sets
-`LiteRtRuntime.NativeLibraryDirectory`. Harmless for CPU; required for GPU/IL2CPP.
+The `LiteRT.Unity` UPM package (`Packages/manifest.json` →
+`"com.github.asus4.litert": "file:../../../src/LiteRT.Unity"`) ships the LiteRT C# bindings
+as **source** (`src/LiteRT.Unity/Runtime/Bindings/`, synced from `src/LiteRT` by
+`scripts/sync-unity-bindings.sh`), compiled into the **`LiteRT.Managed`** assembly (the asmdef
+is named `LiteRT.Managed`, not `LiteRT`, to avoid colliding with the Windows native
+`LiteRt.dll`). Source — not the prebuilt NuGet DLL — is required so the iOS
+`#if __IOS__ || (UNITY_IOS && !UNITY_EDITOR)` in `LiteRtNative.cs` resolves the P/Invoke
+target to `"__Internal"` (a precompiled DLL bakes `"LiteRt"` and can't switch). The
+conditional is inert for `dotnet build`, so the NuGet packages are unaffected.
 
-Under Unity, `[DllImport("LiteRt")]` resolves through Unity's plugin system (the imported
-`.dylib`/`.so`), **not** the deps.json `runtimes/<rid>/native` search the .NET CLI uses.
-`LiteRtRuntime.NativeLibraryDirectory` (public hook in `src/LiteRT/NativeRuntime.cs`,
-consulted first by `ResolveLibraryDirectory()`) bridges the gap for the `RuntimeLibraryDir`
-accelerator-plugin path.
+Under Unity, `[DllImport("LiteRt")]` (non-iOS) resolves through Unity's plugin system (the
+imported `.dylib`/`.so`), **not** the deps.json `runtimes/<rid>/native` search the .NET CLI
+uses. `LiteRt.Unity`'s `LiteRtNativeLibrary` runs at `[RuntimeInitializeOnLoadMethod]`, finds
+`Assets/Packages/LiteRT.Native.*/runtimes/<rid>/native`, and sets the public
+`LiteRtRuntime.NativeLibraryDirectory` hook (consulted first by
+`NativeRuntime.ResolveLibraryDirectory()`) so the runtime can `dlopen` accelerator plugins by
+absolute path. Harmless for CPU; required for GPU.
 
 The sample MonoBehaviour (`Assets/Scripts/MinimalInferenceBehaviour.cs`) reads the model
 from `StreamingAssets` with `UnityWebRequest` (modern `async Awaitable` + `await
@@ -94,21 +108,23 @@ whenever no real file path exists.
 
 - **macOS Editor / Android** — work directly off the NuGetForUnity-imported natives
   (`libLiteRt.dylib` / `libLiteRt.so`); Android loads the loose `.so` via the OS loader.
-- **iOS** — needs special handling: the iOS prebuilt is a *dynamic* `libLiteRt.dylib`, and
-  iOS can't consume a loose `.dylib` (a device build needs a code-signed, embedded
-  framework, otherwise Xcode fails with `library 'LiteRt' not found`). So:
-  - `native/make-ios-xcframework.sh` repackages the device + simulator dylibs into
-    `LiteRt.xcframework` (binary renamed `LiteRt`, install name
-    `@rpath/LiteRt.framework/LiteRt`) under `src/LiteRT.Unity/Plugins/iOS~/`. The `~`
-    suffix keeps Unity from importing it as a loose plugin (which is what caused the
-    `-lLiteRt` link error).
-  - The bare iOS dylib is excluded from the Unity project: the `ios`/`ios-arm64` entries
-    were removed from `NativeRuntimeSettings.json` so NuGetForUnity no longer extracts it.
-  - `LiteRT.Unity`'s Editor post-build hook (`LiteRtIosBuildProcessor`, an
-    `IPostprocessBuildWithReport`) copies the xcframework into the generated Xcode project,
-    links it into the `UnityFramework` target, and embeds + code-signs it in the main app
-    target. At runtime dyld already has the framework loaded, so the unchanged
-    `[DllImport("LiteRt")]` resolves it by leaf name — **no `__Internal`, no change to the
-    NuGet bindings**.
-  - After pulling these changes, **re-export the iOS project** (a stale export won't have
-    the xcframework), then rebuild in Xcode. Expect the same `[1.5811, 3.5355]` output.
+  The iOS `#if` in `LiteRtNative.cs` is not taken, so these use `[DllImport("LiteRt")]`.
+- **iOS** — the prebuilt is a *dynamic* `libLiteRt.dylib`; iOS can't consume a loose
+  `.dylib` (a device build needs a code-signed, embedded framework — otherwise Xcode fails
+  with `library 'LiteRt' not found`). Two pieces work together:
+  - **Delivery**: `scripts/make-ios-xcframework.sh` repackages the device + simulator dylibs
+    into `LiteRt.xcframework` (binary renamed `LiteRt`, install name
+    `@rpath/LiteRt.framework/LiteRt`), zips it, and `LiteRT.Native` ships it at
+    `runtimes/ios/native/LiteRt.xcframework.zip` (matching `Microsoft.ML.OnnxRuntime`).
+    `ios` is in the project's `NativeRuntimeSettings.json`, so NuGetForUnity extracts the
+    zip as a plain asset (a `.zip` isn't a `PluginImporter`, so NuGetForUnity leaves it
+    alone — no `-lLiteRt` auto-link error). `LiteRtPostprocessBuild` (an
+    `IPostprocessBuildWithReport`) finds the zip under `Assets/Packages`, unzips it into the
+    Xcode project, links it into `UnityFramework`, and embeds + code-signs it in the main app
+    target.
+  - **Symbol resolution**: with the framework linked (loaded at launch), the iOS
+    `[DllImport("__Internal")]` (from the source-compiled bindings) resolves the symbols via
+    `dlsym(RTLD_DEFAULT)`. (A named `dlopen("LiteRt")` does *not* find an embedded framework
+    on iOS — verified — which is why `__Internal` is required.)
+  - **Re-export after changes** (a stale Xcode export won't have the framework), then build
+    in Xcode on device. Expect the same `[1.5811, 3.5355]` output and no `DllNotFoundException`.

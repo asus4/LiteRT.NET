@@ -1,12 +1,12 @@
 {
-    "name": "LiteRT.Unity",
-    "rootNamespace": "LiteRT.Unity",
-    "references": [
-        "LiteRT.Managed"
+    "name": "LiteRT.Unity.Editor",
+    "rootNamespace": "LiteRT.Unity.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
     ],
-    "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": true,
+    "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

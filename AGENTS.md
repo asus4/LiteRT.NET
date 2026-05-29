@@ -31,7 +31,7 @@ active backend is simply whichever GPU package you reference.
   (official C/C++ SDK, `storage.googleapis.com/litert/binaries/<ver>/`). For local
   development the prebuilt binaries under `LiteRT-LM/prebuilt/<platform>/` work too.
 - **LiteRT-LM C API (`libLiteRtLmC`)** — used by `LiteRT.LM.Managed`. **Not** prebuilt
-  upstream; we build it ourselves from `//c:engine` (see `native/litert-lm-c/`). CI
+  upstream; we build it ourselves from `//c:engine` (see `scripts/litert-lm-c/`). CI
   (`.github/workflows/build-natives.yml`) builds it per platform and uploads it as a
   workflow artifact.
 
@@ -40,8 +40,8 @@ For local builds, run the fetch script to populate `src/*.Native/runtimes/<rid>/
 from the local prebuilt SDK, the locally built LM library (`out/`), and the official SDK:
 
 ```bash
-native/fetch-natives.sh            # all RIDs (best-effort)
-LITERT_RIDS=osx-arm64 native/fetch-natives.sh   # just the host RID
+scripts/fetch-natives.sh            # all RIDs (best-effort)
+LITERT_RIDS=osx-arm64 scripts/fetch-natives.sh   # just the host RID
 ```
 
 The fetched binaries flow into the `dotnet` build output automatically (ProjectReference
@@ -69,7 +69,7 @@ src/LiteRT.Unity/       Unity UPM package (com.github.asus4.litert): native-dir 
 build/                  Shared MSBuild logic for the Native packages
 examples/               Runnable samples (see examples/README.md)
 examples/MinimalInferenceUnity/  Unity 6 sample consuming the NuGet packages via NuGetForUnity
-native/fetch-natives.sh Populates src/*.Native/runtimes from prebuilt/SDK/out
-native/litert-lm-c/     Bazel wrapper + build script for libLiteRtLmC
+scripts/                Build/dev automation: fetch-natives.sh (populate runtimes),
+                        make-ios-xcframework.sh, sync-unity-bindings.sh, litert-lm-c/ (Bazel)
 .github/workflows/      CI (managed) and native build matrix
 ```

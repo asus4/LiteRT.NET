@@ -1,9 +1,7 @@
 {
-    "name": "LiteRT.Unity",
-    "rootNamespace": "LiteRT.Unity",
-    "references": [
-        "LiteRT.Managed"
-    ],
+    "name": "LiteRT.Managed",
+    "rootNamespace": "LiteRT",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
@@ -12,5 +10,5 @@
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
-    "noEngineReferences": false
+    "noEngineReferences": true
 }

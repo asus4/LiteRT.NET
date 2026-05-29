@@ -91,15 +91,6 @@
             ]
         },
         {
-            "cpuArchitecture": "ARM64",
-            "editorCpuArchitecture": "",
-            "editorOperatingSystem": "",
-            "runtime": "ios-arm64",
-            "supportedPlatformTargets": [
-                "iOS"
-            ]
-        },
-        {
             "cpuArchitecture": "x86_64",
             "editorCpuArchitecture": "",
             "editorOperatingSystem": "",
