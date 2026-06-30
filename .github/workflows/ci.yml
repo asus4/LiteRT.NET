@@ -29,11 +29,11 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Fetch natives (linux-x64; LM lib comes from build-natives artifacts)
+      - name: Fetch natives
         working-directory: litert-net
         run: |
           chmod +x scripts/fetch-natives.sh
-          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" LITERT_RIDS=linux-x64 scripts/fetch-natives.sh
+          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" scripts/fetch-natives.sh
 
       - name: Restore
         working-directory: litert-net

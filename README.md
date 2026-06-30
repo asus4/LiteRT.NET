@@ -24,7 +24,7 @@ Simple LLM
 ```bash
 # Build the LM native library once (Bazel; see scripts/litert-lm-c/build.sh):
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
-# Then fetch-natives.sh copies it (and the Gemma plugin) into LiteRT.LM.Native:
+# Fetch other dependent libraries into LiteRT.LM.Native:
 LITERT_RIDS=osx-arm64 scripts/fetch-natives.sh
 
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu

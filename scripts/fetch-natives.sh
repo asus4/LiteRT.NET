@@ -56,11 +56,19 @@ prebuilt_platform() {
 # exactly one: the registry's accelerator probe order is hardcoded in the prebuilt lib
 # and registers the FIRST present, so "which backend" == "which dylib is in bin".
 #
-# *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM decode-time plugins.
-# We deliberately DO NOT ship them: the prebuilt WebGPU sampler is symbol-incompatible
-# with our self-built libLiteRtLmC, and on-GPU sampling is clamped to greedy anyway, so
-# the engine falls back to CPU sampling (correct output). Shipping them adds only dead
-# weight + a misleading warning. (Re-enable here if a compatible GPU sampler appears.)
+# *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM decode-time plugins
+# that the LM sampler factory dlopens by bare leaf name. We deliberately DO NOT ship them on
+# macOS; on-GPU sampling falls back to CPU sampling (correct output) instead. Verified reasons
+# (LiteRT-LM/prebuilt/macos_arm64, checked with `nm -gU`):
+#   - WebGpu sampler: the recommended LM GPU backend, but the prebuilt dylib is STALE — it only
+#     exports Create/Destroy/SampleToIdAndScoreBuffer and is missing UpdateConfig (plus
+#     CanHandleInput/HandlesInput/SetInputTensorsAndInferenceFunc) that the sampler_factory in
+#     the libLiteRtLmC we build now requires, so dlsym fails and the factory falls back to CPU.
+#   - Metal sampler: ABI-complete (loads fine), but the Metal accelerator mis-computes LM logits
+#     (garbled output), so its only activation path is unusable for LM anyway.
+# Net: neither yields correct on-GPU sampling on macOS today. Re-enable by routing the relevant
+# sampler to its backend package below once a refreshed prebuilt (full WebGpu sampler ABI, or a
+# fixed Metal accelerator) appears.
 classify() {
     case "$1" in
         libLiteRt.dylib|libLiteRt.so|libLiteRt.dll|LiteRt.dll) echo "core" ;;
