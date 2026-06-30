@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
-# Copies the canonical LiteRT C# bindings (src/LiteRT) into the LiteRT.Unity package so Unity
-# compiles them from source.
-#
-# Why source (not the prebuilt NuGet DLL) in Unity: the iOS P/Invoke target must be
-# "__Internal" (see the `#if ... UNITY_IOS` in LiteRtNative.cs). A precompiled netstandard2.1
-# DLL bakes "LiteRt" and Unity uses it unchanged on iOS, so the conditional only takes effect
-# when Unity itself compiles the source. The canonical source stays in src/LiteRT; this copy
-# is generated (and committed so the UPM package is self-contained). Re-run after editing the
-# bindings; CI can diff to catch drift.
+# Copies the canonical C# bindings (src/LiteRT) into the Unity package so Unity compiles them
+# from source. Source (not the prebuilt DLL) is required because the iOS P/Invoke target must be
+# "__Internal" (see the `#if ... UNITY_IOS` in LiteRtNative.cs) — a precompiled DLL bakes "LiteRt".
+# The committed copy keeps the UPM package self-contained; re-run after editing, CI diffs for drift.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,7 +11,7 @@ DST="$REPO_ROOT/unity/LiteRT/Runtime/Bindings"
 
 mkdir -p "$DST/Interop"
 
-# Clear previously-synced sources (keep the asmdef and Unity .meta files).
+# Keep the asmdef and .meta files; replace only the synced sources.
 find "$DST" -name "*.cs" -delete
 
 cp "$SRC"/*.cs "$DST/"

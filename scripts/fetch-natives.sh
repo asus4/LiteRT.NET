@@ -1,23 +1,13 @@
 #!/usr/bin/env bash
-# Populates the per-RID native payloads for the LiteRT.NET Native packages.
+# Populates the per-RID native payloads (runtimes/<rid>/native, .gitignore'd) for the
+# LiteRT.NET Native packages, from three best-effort sources (missing pieces warn, not fatal):
+#   - LiteRT-LM/prebuilt/<platform>/  desktop+iOS core, GPU accelerators, LM samplers, Gemma plugin
+#   - $LITERT_LM_OUT (default: out/)  locally built libLiteRtLmC (+ Gemma) for the host RID
+#   - official LiteRT SDK             core for RIDs prebuilt lacks (e.g. Android)
+# Run before `dotnet pack`/`dotnet run`.
 #
-# Layout produced (relative to repo root):
-#   src/LiteRT.Native/runtimes/<rid>/native/      core libLiteRt
-#   src/LiteRT.Gpu.Native/runtimes/<rid>/native/  core GPU accelerators (Metal/WebGpu/OpenCl)
-#   src/LiteRT.LM.Native/runtimes/<rid>/native/   libLiteRtLmC + Gemma plugin + LM GPU samplers
-#
-# These directories are .gitignore'd; binaries ship only inside NuGet packages
-# and on GitHub Release pages. Run this before `dotnet pack`/`dotnet run`.
-#
-# Sources (best-effort; missing pieces are warned, not fatal):
-#   - LiteRT-LM/prebuilt/<platform>/  : desktop+iOS core, GPU accelerators, LM samplers, Gemma plugin
-#   - $LITERT_LM_OUT (default: out/)  : locally built libLiteRtLmC (+ Gemma) for the host RID
-#   - official LiteRT SDK             : core for RIDs not covered by prebuilt (e.g. Android)
-#
-# Environment:
-#   LITERT_LM_DIR  Path to a LiteRT-LM checkout (default: ../LiteRT-LM)
-#   LITERT_LM_OUT  Path to locally built LM output (default: <repo>/out)
-#   LITERT_RIDS    Space-separated RIDs to populate (default: all known RIDs)
+# Env: LITERT_LM_DIR (LiteRT-LM checkout, default ../LiteRT-LM), LITERT_LM_OUT (LM build
+# output, default <repo>/out), LITERT_RIDS (RIDs to populate, default all).
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -34,7 +24,7 @@ GPU_WEBGPU_PKG="$REPO_DIR/src/LiteRT.Gpu.WebGpu.Native"
 GPU_OPENCL_PKG="$REPO_DIR/src/LiteRT.Gpu.OpenCl.Native"
 LM_PKG="$REPO_DIR/src/LiteRT.LM.Native"
 
-# Map a .NET RID to the LiteRT-LM/prebuilt platform directory name.
+# .NET RID -> LiteRT-LM/prebuilt platform dir name.
 prebuilt_platform() {
     case "$1" in
         osx-arm64)            echo "macos_arm64" ;;
@@ -49,26 +39,14 @@ prebuilt_platform() {
     esac
 }
 
-# Classify a native file by basename: core | gpu-metal | gpu-webgpu | gpu-opencl | lm | skip
-#
-# *Accelerator are core LiteRT GPU delegates (used by LiteRT.Managed for .tflite GPU
-# inference AND by LiteRT-LM). They ship in per-backend packages so a consumer can pick
-# exactly one: the registry's accelerator probe order is hardcoded in the prebuilt lib
-# and registers the FIRST present, so "which backend" == "which dylib is in bin".
-#
-# *Sampler (libLiteRtTopK{Metal,WebGpu,OpenCl}Sampler) are LiteRT-LM decode-time plugins
-# that the LM sampler factory dlopens by bare leaf name. We deliberately DO NOT ship them on
-# macOS; on-GPU sampling falls back to CPU sampling (correct output) instead. Verified reasons
-# (LiteRT-LM/prebuilt/macos_arm64, checked with `nm -gU`):
-#   - WebGpu sampler: the recommended LM GPU backend, but the prebuilt dylib is STALE — it only
-#     exports Create/Destroy/SampleToIdAndScoreBuffer and is missing UpdateConfig (plus
-#     CanHandleInput/HandlesInput/SetInputTensorsAndInferenceFunc) that the sampler_factory in
-#     the libLiteRtLmC we build now requires, so dlsym fails and the factory falls back to CPU.
-#   - Metal sampler: ABI-complete (loads fine), but the Metal accelerator mis-computes LM logits
-#     (garbled output), so its only activation path is unusable for LM anyway.
-# Net: neither yields correct on-GPU sampling on macOS today. Re-enable by routing the relevant
-# sampler to its backend package below once a refreshed prebuilt (full WebGpu sampler ABI, or a
-# fixed Metal accelerator) appears.
+# Classify a native file by basename: core | gpu-metal | gpu-webgpu | gpu-opencl | lm | skip.
+# *Accelerator dylibs ship one-per-package so the consumer picks a backend by reference (the
+# core's probe order is hardcoded and registers the first one present).
+# *Sampler dylibs are skipped on macOS — neither works for LM today, so on-GPU sampling falls
+# back to CPU (correct output): the WebGpu sampler prebuilt is stale (missing UpdateConfig et al.
+# that current libLiteRtLmC requires), and the Metal sampler only engages under the Metal
+# accelerator, which mis-computes LM logits. Route one back to its package when a fixed prebuilt
+# appears.
 classify() {
     case "$1" in
         libLiteRt.dylib|libLiteRt.so|libLiteRt.dll|LiteRt.dll) echo "core" ;;
@@ -83,7 +61,7 @@ classify() {
     esac
 }
 
-# Destination dir for a class, given the rid.
+# dest_dir <class> <rid> -> package runtimes dir.
 dest_dir() {
     case "$1" in
         core)       echo "$CORE_PKG/runtimes/$2/native" ;;
@@ -94,22 +72,17 @@ dest_dir() {
     esac
 }
 
-# Copy a single shared library into the right package, applying OS-default
-# P/Invoke naming for the core entry-point lib on Windows (lib-prefix stripped).
+# Copy one shared library into its package (classify -> dest_dir).
 place_file() {
     local src="$1" rid="$2"
     local base; base="$(basename "$src")"
     case "$base" in *.lib|BUILD) return 0 ;; esac
 
-    # Backends are routed into separate packages (classify -> dest_dir), so a consumer
-    # picks the accelerator by referencing one package. macOS ships both Metal and WebGPU
-    # prebuilts; they land in their respective packages. (For LM decode the Metal
-    # accelerator mis-computes logits, so LM consumers should use LiteRT.Gpu.WebGpu.Native.)
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
 
-    # iOS core ships as an xcframework.zip (built once by build_ios_core_xcframework below),
-    # not a bare per-RID dylib — a loose .dylib can't be embedded/code-signed on iOS.
+    # iOS core ships as an xcframework.zip (build_ios_core_xcframework, below), not a loose
+    # dylib — a bare .dylib can't be embedded/code-signed on iOS.
     if [ "$class" = "core" ] && { [[ "$rid" == ios-* ]] || [[ "$rid" == iossimulator-* ]]; }; then
         return 0
     fi
@@ -117,10 +90,9 @@ place_file() {
     local out; out="$(dest_dir "$class" "$rid")"
     mkdir -p "$out"
 
+    # Core is [DllImport("LiteRt")]; on Windows .NET resolves "LiteRt.dll" (no lib prefix).
+    # Plugins keep their as-linked names so dependents' dlopen finds them.
     local name="$base"
-    # Core is P/Invoke'd as [DllImport("LiteRt")]; on Windows .NET resolves
-    # "LiteRt.dll" (no lib prefix). Plugins keep their as-linked names so the
-    # loader / dlopen can find them by the name embedded in their dependents.
     if [ "$class" = "core" ] && [[ "$rid" == win-* ]]; then
         name="LiteRt.dll"
     fi
@@ -129,7 +101,6 @@ place_file() {
     echo "  + $rid/$class  $name"
 }
 
-# Copy everything available from LiteRT-LM/prebuilt/<platform> for a rid.
 from_prebuilt() {
     local rid="$1" platform; platform="$(prebuilt_platform "$rid")"
     local dir="$LITERT_LM_DIR/prebuilt/$platform"
@@ -140,7 +111,7 @@ from_prebuilt() {
     done
 }
 
-# Copy the locally built LM library (and its Gemma plugin) for the host RID.
+# Locally built LM library (+ Gemma plugin), host RID only.
 from_local_lm_out() {
     local rid="$1"
     [ -d "$LITERT_LM_OUT" ] || return 0
@@ -150,15 +121,13 @@ from_local_lm_out() {
     done
 }
 
-# For RIDs whose core is not in prebuilt (Android), try the official SDK.
+# Core for RIDs prebuilt lacks (Android): fetch from the official SDK.
 fetch_core_from_sdk() {
     local rid="$1"
     local core_out; core_out="$(dest_dir core "$rid")"
-    # Already populated from prebuilt? then skip.
     [ -f "$core_out/libLiteRt.so" ] || [ -f "$core_out/libLiteRt.dylib" ] || \
         [ -f "$core_out/LiteRt.dll" ] && return 0
 
-    # SDK platform tokens may differ from prebuilt tokens; adjust if upstream changes.
     local token=""
     case "$rid" in
         android-arm64) token="android_arm64" ;;
@@ -198,8 +167,8 @@ for rid in $RIDS; do
     fetch_core_from_sdk "$rid"
 done
 
-# Build the iOS core xcframework.zip (device + simulator) when both prebuilt slices exist
-# and an iOS RID was requested. macOS-only (needs xcodebuild); skipped elsewhere.
+# Build the iOS core xcframework.zip when an iOS RID is requested and both prebuilt slices
+# exist. macOS-only (needs xcodebuild).
 build_ios_core_xcframework() {
     case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
     [ "$(uname -s)" = "Darwin" ] || { echo "  (skip iOS xcframework: not macOS)"; return 0; }

@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
-# Builds libLiteRtLmC, a self-contained shared library exposing the LiteRT-LM
-# C API (LiteRT-LM/c/engine.h), by adding a small Bazel package to a checkout of
-# the LiteRT-LM repository and building it with linkshared=1.
+# Builds libLiteRtLmC, a shared library exposing the LiteRT-LM C API (c/engine.h), by
+# dropping a small Bazel package into a LiteRT-LM checkout and building it with linkshared=1.
 #
-# Usage:
-#   build.sh <litert-lm-source-dir> <output-dir>
-#
-# Environment:
-#   BAZEL   bazel binary to use (default: bazelisk if present, else bazel)
-#
+# Usage: build.sh <litert-lm-source-dir> <output-dir>
+# Env:   BAZEL (default: bazelisk if present, else bazel)
 # Output: <output-dir>/libLiteRtLmC.{so|dylib|dll} (+ .dll import lib on Windows)
 set -euo pipefail
 
@@ -19,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BAZEL="${BAZEL:-$(command -v bazelisk || command -v bazel)}"
 mkdir -p "$OUT_DIR"
 
-# Inject the wrapper Bazel package into the LiteRT-LM checkout.
+# Inject the wrapper Bazel package into the checkout.
 PKG_DIR="$SRC_DIR/litert_lm_dotnet"
 mkdir -p "$PKG_DIR"
 cp "$SCRIPT_DIR/BUILD.bazel" "$PKG_DIR/BUILD"
@@ -27,12 +22,10 @@ cp "$SCRIPT_DIR/BUILD.bazel" "$PKG_DIR/BUILD"
 echo "Building //litert_lm_dotnet:LiteRtLmC with $BAZEL ..."
 ( cd "$SRC_DIR" && "$BAZEL" build //litert_lm_dotnet:LiteRtLmC -c opt )
 
-# Bazel emits libLiteRtLmC.so on Linux/macOS and LiteRtLmC.dll on Windows.
 BIN_DIR="$SRC_DIR/bazel-bin/litert_lm_dotnet"
 case "$(uname -s)" in
     Darwin)
-        # Depending on the toolchain Bazel emits either libLiteRtLmC.dylib or
-        # libLiteRtLmC.so; ship whichever exists under the conventional .dylib name.
+        # Bazel emits .dylib or .so depending on the toolchain; ship either as .dylib.
         if [ -f "$BIN_DIR/libLiteRtLmC.dylib" ]; then
             cp "$BIN_DIR/libLiteRtLmC.dylib" "$OUT_DIR/libLiteRtLmC.dylib"
         else
@@ -52,10 +45,8 @@ case "$(uname -s)" in
         ;;
 esac
 
-# libLiteRtLmC has a load-time dependency on the constrained-decoding plugin
-# (@rpath/libGemmaModelConstraintProvider.*) and its rpath includes @loader_path,
-# so the plugin must sit next to the library or dlopen of libLiteRtLmC fails.
-# It is not built by us; copy the matching prebuilt from the LiteRT-LM checkout.
+# libLiteRtLmC load-time depends on @rpath/libGemmaModelConstraintProvider.* (rpath includes
+# @loader_path), so the plugin must sit beside it. We don't build it — copy the prebuilt.
 case "$(uname -s)" in
     Darwin)  PLUGIN_PLATFORM="macos_arm64"; PLUGIN_EXT="dylib" ;;
     Linux)   PLUGIN_EXT="so"
