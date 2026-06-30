@@ -29,21 +29,15 @@ FRAMEWORK_NAME="LiteRt"
 BUNDLE_ID="com.github.asus4.litert.LiteRt"
 MIN_OS="14.0"
 
-DEVICE_DYLIB="$PREBUILT_DIR/ios_arm64/libLiteRt.dylib"
-SIM_DYLIB="$PREBUILT_DIR/ios_sim_arm64/libLiteRt.dylib"
-
-for f in "$DEVICE_DYLIB" "$SIM_DYLIB"; do
-    [ -f "$f" ] || { echo "ERROR: missing $f" >&2; exit 1; }
-done
-
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# Builds a flat iOS .framework from a dylib at $1 into dir $2, with the given supported
-# platform ($3 = iPhoneOS | iPhoneSimulator).
+# Builds a flat iOS .framework at $1 from the dylib at $2, with CFBundleSupportedPlatforms
+# set to $3 (iPhoneOS | iPhoneSimulator).
 make_framework() {
-    local dylib="$1" fwdir="$2" platform="$3"
-    local fw="$fwdir/$FRAMEWORK_NAME.framework"
+    local fw="$1" dylib="$2" platform="$3"
+    [ -f "$dylib" ] || { echo "ERROR: missing $dylib" >&2; exit 1; }
+    echo "Building $platform framework: $fw"
     mkdir -p "$fw"
     cp "$dylib" "$fw/$FRAMEWORK_NAME"
     chmod +w "$fw/$FRAMEWORK_NAME"
@@ -68,25 +62,24 @@ make_framework() {
 PLIST
 }
 
-echo "Building device framework..."
-make_framework "$DEVICE_DYLIB" "$WORK/device" "iPhoneOS"
-echo "Building simulator framework..."
-make_framework "$SIM_DYLIB" "$WORK/sim" "iPhoneSimulator"
+DEVICE_FW="$WORK/device/$FRAMEWORK_NAME.framework"
+SIM_FW="$WORK/sim/$FRAMEWORK_NAME.framework"
+make_framework "$DEVICE_FW" "$PREBUILT_DIR/ios_arm64/libLiteRt.dylib"     "iPhoneOS"
+make_framework "$SIM_FW"    "$PREBUILT_DIR/ios_sim_arm64/libLiteRt.dylib" "iPhoneSimulator"
 
-WORK_XC="$WORK/$FRAMEWORK_NAME.xcframework"
 echo "Creating xcframework..."
 xcodebuild -create-xcframework \
-    -framework "$WORK/device/$FRAMEWORK_NAME.framework" \
-    -framework "$WORK/sim/$FRAMEWORK_NAME.framework" \
-    -output "$WORK_XC"
+    -framework "$DEVICE_FW" \
+    -framework "$SIM_FW" \
+    -output "$WORK/$FRAMEWORK_NAME.xcframework"
 
 OUT_ZIP="$OUT_DIR/$FRAMEWORK_NAME.xcframework.zip"
 mkdir -p "$OUT_DIR"
 rm -f "$OUT_ZIP"
 
 echo "Zipping -> $OUT_ZIP"
-# Zip with the .xcframework as the top-level entry (cd into WORK so the archive root is the
-# bundle, matching Microsoft.ML.OnnxRuntime's onnxruntime.xcframework.zip layout).
+# Zip with the .xcframework as the top-level entry (matches Microsoft.ML.OnnxRuntime's
+# onnxruntime.xcframework.zip layout).
 ( cd "$WORK" && zip -qry "$OUT_ZIP" "$FRAMEWORK_NAME.xcframework" )
 
 echo "Done: $OUT_ZIP"

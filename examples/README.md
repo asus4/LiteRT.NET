@@ -38,8 +38,11 @@ dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
 
 For GPU decode this example references `LiteRT.Gpu.WebGpu.Native`: the Metal accelerator
 mis-computes LM logits (produces a repetition loop), whereas WebGPU/Dawn is correct.
-On-GPU sampling falls back to CPU sampling (the prebuilt GPU samplers are not shipped),
-which yields correct output.
+On-GPU TopK sampling falls back to CPU sampling (which yields correct output): on macOS
+the prebuilt GPU samplers are not shipped because neither works for LM today — the WebGPU
+sampler dylib is stale (missing the `UpdateConfig`/`CanHandleInput`/… symbols current
+`libLiteRtLmC` requires, so it fails to load), and the Metal sampler loads but only engages
+under the logit-broken Metal accelerator. See `scripts/fetch-natives.sh` `classify()`.
 
 ## MinimalInferenceUnity (LiteRT core, in Unity)
 
