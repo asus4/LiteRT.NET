@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Wraps the prebuilt iOS core dylibs (device + simulator) into a dynamic LiteRt.xcframework,
-# zipped, for the LiteRT.Native package payload (runtimes/ios/native/).
+# zipped, for the LiteRT package payload (runtimes/ios/native/).
 #
 # Why: a loose `.dylib` can't be code-signed/embedded on an iOS device build, so (matching
 # Microsoft.ML.OnnxRuntime) we ship a zipped `.xcframework`. The binary is renamed `LiteRt`
@@ -11,12 +11,12 @@
 #
 # Usage: make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR]
 #   PREBUILT_DIR default ../LiteRT-LM/prebuilt (expects ios_arm64/, ios_sim_arm64/)
-#   OUT_DIR      default src/LiteRT.Native/runtimes/ios/native
+#   OUT_DIR      default src/LiteRT/runtimes/ios/native
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREBUILT_DIR="${1:-$REPO_ROOT/../LiteRT-LM/prebuilt}"
-OUT_DIR="${2:-$REPO_ROOT/src/LiteRT.Native/runtimes/ios/native}"
+OUT_DIR="${2:-$REPO_ROOT/src/LiteRT/runtimes/ios/native}"
 
 FRAMEWORK_NAME="LiteRt"
 BUNDLE_ID="com.github.asus4.litert.LiteRt"

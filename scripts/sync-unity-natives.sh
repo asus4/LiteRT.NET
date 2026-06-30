@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copies the core natives from the per-RID layout (src/LiteRT.Native/runtimes/<rid>/native)
+# Copies the core natives from the per-RID layout (src/LiteRT/runtimes/<rid>/native)
 # into the Unity package's Plugins/ tree (unity/LiteRT/Plugins/<platform>). The .meta files
 # there are committed (stable GUIDs + platform settings); only the .gitignore'd binaries are
 # copied. Run `scripts/fetch-natives.sh` first to populate the source runtimes; CI runs both
@@ -7,7 +7,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO_DIR/src/LiteRT.Native/runtimes"
+SRC="$REPO_DIR/src/LiteRT/runtimes"
 DST="$REPO_DIR/unity/LiteRT/Plugins"
 
 # src-relative-file | dst-relative-file

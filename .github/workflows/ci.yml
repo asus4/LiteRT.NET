@@ -33,7 +33,7 @@ jobs:
         working-directory: litert-net
         run: |
           chmod +x scripts/fetch-natives.sh
-          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" scripts/fetch-natives.sh
+          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" scripts/fetch-natives.sh   # -> src/LiteRT|src/LiteRT.LM/runtimes/<rid>/native
 
       - name: Restore
         working-directory: litert-net
@@ -48,11 +48,9 @@ jobs:
       - name: Pack
         working-directory: litert-net
         run: |
-          dotnet pack -c Release -o artifacts "src/LiteRT.Native/LiteRT.Native.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.OpenCl.Native/LiteRT.Gpu.OpenCl.Native.csproj"
-          dotnet pack -c Release -o artifacts "src/LiteRT.LM.Native/LiteRT.LM.Native.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT/LiteRT.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT.LM/LiteRT.LM.csproj"
 

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageId>LiteRT.Gpu.OpenCl.Native</PackageId>
-    <Description>Optional OpenCL / GL GPU accelerator for LiteRT (Android). Add alongside LiteRT.Native to enable GPU.</Description>
+    <Description>Optional OpenCL / GL GPU accelerator for LiteRT (Android)</Description>
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>

@@ -12,8 +12,10 @@ scripts/fetch-natives.sh
 ## MinimalInference (LiteRT core)
 
 ```bash
-dotnet run --project examples/MinimalInference                       # CPU (default)
-dotnet run --project examples/MinimalInference -- <model.tflite> gpu  # GPU
+# CPU
+dotnet run --project examples/MinimalInference
+# GPU                       
+dotnet run --project examples/MinimalInference -- <model.tflite> gpu
 ```
 
 Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
@@ -27,9 +29,8 @@ GPU/NPU plugins).
 ## SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
 
 ```bash
-# Build the LM native library once (Bazel; see scripts/litert-lm-c/build.sh):
+# Initial setup:
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
-# Then fetch-natives.sh copies it (and the Gemma plugin) into LiteRT.LM.Native:
 scripts/fetch-natives.sh
 
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
@@ -56,7 +57,7 @@ Verified end-to-end on the macOS Editor (Apple Silicon, CPU).
 project:
 
 1. `scripts/fetch-natives.sh` — fetches/builds the core natives into
-   `src/LiteRT.Native/runtimes/<rid>/native` (on macOS it also builds the iOS
+   `src/LiteRT/runtimes/<rid>/native` (on macOS it also builds the iOS
    `LiteRt.xcframework.zip` via `scripts/make-ios-xcframework.sh`).
 2. `scripts/sync-unity-natives.sh` — copies those into `unity/LiteRT/Plugins/<platform>`.
 3. `scripts/sync-unity-bindings.sh` — copies the C# bindings from `src/LiteRT` into

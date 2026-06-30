@@ -3,19 +3,18 @@
     <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
     <RootNamespace>LiteRT</RootNamespace>
     <AssemblyName>LiteRT</AssemblyName>
-    <PackageId>LiteRT.Managed</PackageId>
-    <Description>C# bindings for Google LiteRT (on-device inference runtime).</Description>
+    <PackageId>LiteRT</PackageId>
+    <Description>C# bindings for Google LiteRT + Core native libs</Description>
     <IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0'">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Becomes a NuGet dependency at pack time. Private=false keeps the empty native
-         stub assembly out of build output; the runtimes/ payload still transits. -->
-    <ProjectReference Include="../LiteRT.Native/LiteRT.Native.csproj" Private="false" />
+    <InternalsVisibleTo Include="LiteRT.LM" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Lets LiteRT.LM reuse internal native-resolution helpers (e.g. NativeRuntime). -->
-    <InternalsVisibleTo Include="LiteRT.LM" />
+    <None Include="../../build/NativeConsumer.targets" Pack="true" PackagePath="build/$(PackageId).targets" Visible="false" />
   </ItemGroup>
+
+  <Import Project="../../build/Native.targets" />
 </Project>
