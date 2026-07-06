@@ -38,7 +38,7 @@ try
         var buffer = compiled.CreateInputBuffer(signature, i);
         inputs.Add(buffer);
         int count = buffer.PackedByteSize / sizeof(float);
-        Console.WriteLine($"  input '{signature.GetInputName(i)}': {buffer.ElementType}, {count} float element(s)");
+        Console.WriteLine($"  input '{signature.GetInputName(i)}': {signature.GetInputTensorType(i)}, {count} float element(s)");
 
         // Fill with a simple ramp so the output is deterministic.
         var data = new float[count];
@@ -49,6 +49,7 @@ try
     for (int i = 0; i < signature.OutputCount; i++)
     {
         outputs.Add(compiled.CreateOutputBuffer(signature, i));
+        Console.WriteLine($"  output '{signature.GetOutputName(i)}': {signature.GetOutputTensorType(i)}");
     }
 
     compiled.Run(signature, inputs, outputs);
