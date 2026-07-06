@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using LiteRT;
 using UnityEngine;
 
 namespace LiteRT.Unity
@@ -35,8 +34,7 @@ namespace LiteRT.Unity
             }
             else
             {
-                Debug.Log("[LiteRT.Unity] Could not locate the native library directory; " +
-                          "relying on the default DllImport search. GPU accelerators may not load.");
+                Debug.Log("[LiteRT.Unity] Could not locate the native library directory.");
             }
         }
 

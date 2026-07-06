@@ -61,7 +61,7 @@ jobs:
           LITERT_LM_DIR: ${{ github.workspace }}/litert-lm
         run: |
           chmod +x scripts/*.sh
-          scripts/fetch-natives.sh            # -> src/LiteRT.Native/runtimes/<rid>/native
+          scripts/fetch-natives.sh            # -> src/LiteRT/runtimes/<rid>/native (+ src/LiteRT.LM, GPU pkgs)
           scripts/sync-unity-natives.sh       # -> unity/LiteRT/Plugins/<platform>
           scripts/sync-unity-bindings.sh      # -> unity/LiteRT/Runtime/Bindings
 

@@ -58,7 +58,7 @@ dylib reaches this package (e.g. skip `*GpuAccelerator.*`, or route it to its ow
 
 ## How this was determined
 
-Reverse-engineered from the prebuilt `src/LiteRT.Native/runtimes/android-arm64/native/libLiteRt.so`:
+Reverse-engineered from the prebuilt `src/LiteRT/runtimes/android-arm64/native/libLiteRt.so`:
 
 1. `strings`/`nm -D` confirmed the five candidate basenames and the shared
    `LiteRtAcceleratorImpl@@VERS_1.0` export.

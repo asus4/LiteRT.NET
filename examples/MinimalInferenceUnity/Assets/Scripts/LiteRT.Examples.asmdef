@@ -1,0 +1,18 @@
+{
+    "name": "LiteRT.Examples",
+    "rootNamespace": "",
+    "references": [
+        "GUID:06afe3ae4dc774d4aacad733afa5c7f2",
+        "GUID:90a6231d1c0bf416dadf7f737d3b6820",
+        "GUID:7f541cd3eb224de8902dbf0cdaaa3cd9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

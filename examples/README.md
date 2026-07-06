@@ -12,8 +12,10 @@ scripts/fetch-natives.sh
 ## MinimalInference (LiteRT core)
 
 ```bash
-dotnet run --project examples/MinimalInference                       # CPU (default)
-dotnet run --project examples/MinimalInference -- <model.tflite> gpu  # GPU
+# CPU
+dotnet run --project examples/MinimalInference
+# GPU                       
+dotnet run --project examples/MinimalInference -- <model.tflite> gpu
 ```
 
 Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
@@ -27,9 +29,8 @@ GPU/NPU plugins).
 ## SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
 
 ```bash
-# Build the LM native library once (Bazel; see scripts/litert-lm-c/build.sh):
+# Initial setup:
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
-# Then fetch-natives.sh copies it (and the Gemma plugin) into LiteRT.LM.Native:
 scripts/fetch-natives.sh
 
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
@@ -37,12 +38,9 @@ dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
 ```
 
 For GPU decode this example references `LiteRT.Gpu.WebGpu.Native`: the Metal accelerator
-mis-computes LM logits (produces a repetition loop), whereas WebGPU/Dawn is correct.
-On-GPU TopK sampling falls back to CPU sampling (which yields correct output): on macOS
-the prebuilt GPU samplers are not shipped because neither works for LM today — the WebGPU
-sampler dylib is stale (missing the `UpdateConfig`/`CanHandleInput`/… symbols current
-`libLiteRtLmC` requires, so it fails to load), and the Metal sampler loads but only engages
-under the logit-broken Metal accelerator. See `scripts/fetch-natives.sh` `classify()`.
+mis-computes LM logits (repetition loop), whereas WebGPU/Dawn is correct. On-GPU TopK
+sampling falls back to CPU sampling (correct output) because macOS ships no working GPU
+sampler today — see `classify()` in `scripts/fetch-natives.sh` for why.
 
 ## MinimalInferenceUnity (LiteRT core, in Unity)
 
@@ -59,7 +57,7 @@ Verified end-to-end on the macOS Editor (Apple Silicon, CPU).
 project:
 
 1. `scripts/fetch-natives.sh` — fetches/builds the core natives into
-   `src/LiteRT.Native/runtimes/<rid>/native` (on macOS it also builds the iOS
+   `src/LiteRT/runtimes/<rid>/native` (on macOS it also builds the iOS
    `LiteRt.xcframework.zip` via `scripts/make-ios-xcframework.sh`).
 2. `scripts/sync-unity-natives.sh` — copies those into `unity/LiteRT/Plugins/<platform>`.
 3. `scripts/sync-unity-bindings.sh` — copies the C# bindings from `src/LiteRT` into
@@ -106,19 +104,13 @@ file path exists.
 - **macOS Editor / Android** — load directly off the `Plugins/` natives
   (`libLiteRt.dylib` / `libLiteRt.so`); the committed `.meta` enables the right platform/CPU.
   The iOS `#if` in `LiteRtNative.cs` is not taken, so these use `[DllImport("LiteRt")]`.
-- **iOS** — the prebuilt is a *dynamic* `libLiteRt.dylib`; iOS can't consume a loose
-  `.dylib` (a device build needs a code-signed, embedded framework — otherwise Xcode fails
-  with `library 'LiteRt' not found`). Two pieces work together:
-  - **Delivery**: `scripts/make-ios-xcframework.sh` repackages the device + simulator dylibs
-    into `LiteRt.xcframework` (binary renamed `LiteRt`, install name
-    `@rpath/LiteRt.framework/LiteRt`), zips it, and it ships at
-    `unity/LiteRT/Plugins/iOS/LiteRt.xcframework.zip`. A `.zip` isn't a `PluginImporter`, so
-    Unity imports it as a plain asset (no `-lLiteRt` auto-link error). `LiteRtPostprocessBuild`
-    (an `IPostprocessBuildWithReport`) finds the zip in the package, unzips it into the Xcode
-    project, links it into `UnityFramework`, and embeds + code-signs it in the main app target.
-  - **Symbol resolution**: with the framework linked (loaded at launch), the iOS
-    `[DllImport("__Internal")]` (from the source-compiled bindings) resolves the symbols via
-    `dlsym(RTLD_DEFAULT)`. (A named `dlopen("LiteRt")` does *not* find an embedded framework
-    on iOS — verified — which is why `__Internal` is required.)
-  - **Re-export after changes** (a stale Xcode export won't have the framework), then build
-    in Xcode on device. Expect the same `[1.5811, 3.5355]` output and no `DllNotFoundException`.
+- **iOS** — the prebuilt is a *dynamic* `libLiteRt.dylib`, which iOS can't consume loose (a
+  device build needs a code-signed, embedded framework). `scripts/make-ios-xcframework.sh`
+  repackages the device + simulator dylibs into `LiteRt.xcframework.zip` (shipped at
+  `unity/LiteRT/Plugins/iOS/`); Unity imports the `.zip` as a plain asset, and
+  `LiteRtPostprocessBuild` unzips, links, and embeds + code-signs it into the Xcode project.
+  With the framework loaded at launch, the iOS `[DllImport("__Internal")]` resolves symbols
+  via `dlsym(RTLD_DEFAULT)` — a named `dlopen("LiteRt")` does *not* find an embedded framework
+  on iOS, which is why `__Internal` is required. Re-export after binding changes (a stale Xcode
+  export won't have the framework), then build on device: expect the same `[1.5811, 3.5355]`
+  output and no `DllNotFoundException`.

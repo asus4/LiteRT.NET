@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using LiteRT;
 using LiteRT.Interop;
 using LiteRT.Unity;

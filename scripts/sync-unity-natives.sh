@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
-# Copies the core LiteRT native libraries from the NuGet per-RID layout
-# (src/LiteRT.Native/runtimes/<rid>/native) into the Unity package's Plugins/ tree
-# (unity/LiteRT/Plugins/<platform>), where Unity imports them as native plugins.
-#
-# The .meta files under unity/LiteRT/Plugins are committed (stable GUIDs + platform
-# settings); only the binaries are copied here. Binaries stay .gitignore'd and are
-# populated by this script — run `scripts/fetch-natives.sh` first to fill the source
-# runtimes, then this. CI runs both before `upm pack`.
-#
-# iOS ships as LiteRt.xcframework.zip (a loose .dylib can't be embedded/code-signed);
-# it is imported as a plain asset and unzipped + embedded by LiteRtPostprocessBuild.
+# Copies the core natives from the per-RID layout (src/LiteRT/runtimes/<rid>/native)
+# into the Unity package's Plugins/ tree (unity/LiteRT/Plugins/<platform>). The .meta files
+# there are committed (stable GUIDs + platform settings); only the .gitignore'd binaries are
+# copied. Run `scripts/fetch-natives.sh` first to populate the source runtimes; CI runs both
+# before `upm pack`. iOS ships as LiteRt.xcframework.zip (embedded by LiteRtPostprocessBuild).
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO_DIR/src/LiteRT.Native/runtimes"
+SRC="$REPO_DIR/src/LiteRT/runtimes"
 DST="$REPO_DIR/unity/LiteRT/Plugins"
 
-# rid:src-relative-file -> dst-relative-file
+# src-relative-file | dst-relative-file
 MAP=(
     "osx-arm64/native/libLiteRt.dylib|macOS/libLiteRt.dylib"
     "win-x64/native/LiteRt.dll|Windows/x86_64/LiteRt.dll"

@@ -3,15 +3,17 @@
     <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
     <RootNamespace>LiteRT.LM</RootNamespace>
     <AssemblyName>LiteRT.LM</AssemblyName>
-    <PackageId>LiteRT.LM.Managed</PackageId>
-    <Description>C# bindings for Google LiteRT-LM (on-device LLM inference).</Description>
+    <PackageId>LiteRT.LM</PackageId>
+    <Description>C# bindings for Google LiteRT-LM.</Description>
     <IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0'">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../LiteRT/LiteRT.csproj" />
-    <!-- Becomes a NuGet dependency at pack time. Private=false keeps the empty native
-         stub assembly out of build output; the runtimes/ payload still transits. -->
-    <ProjectReference Include="../LiteRT.LM.Native/LiteRT.LM.Native.csproj" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../build/NativeConsumer.targets" Pack="true" PackagePath="build/$(PackageId).targets" Visible="false" />
+  </ItemGroup>
+  <Import Project="../../build/Native.targets" />
 </Project>
