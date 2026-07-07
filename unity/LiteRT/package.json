@@ -1,5 +1,5 @@
 {
-  "name": "com.github.asus4.litert",
+  "name": "com.koki-ibukuro.litert",
   "version": "0.1.0-alpha",
   "displayName": "LiteRT",
   "description": "C#/.NET bindings for LiteRT and CPU native runtime",

@@ -1,17 +1,17 @@
 {
   "dependencies": {
-    "com.github.asus4.litert": {
+    "com.koki-ibukuro.litert": {
       "version": "file:../../../unity/LiteRT",
       "depth": 0,
       "source": "local",
       "dependencies": {}
     },
-    "com.github.asus4.litert.unity": {
+    "com.koki-ibukuro.litert.unity": {
       "version": "file:../../../unity/LiteRT.Unity",
       "depth": 0,
       "source": "local",
       "dependencies": {
-        "com.github.asus4.litert": "0.1.0-alpha",
+        "com.koki-ibukuro.litert": "0.1.0-alpha",
         "com.unity.burst": "1.8.12"
       }
     },

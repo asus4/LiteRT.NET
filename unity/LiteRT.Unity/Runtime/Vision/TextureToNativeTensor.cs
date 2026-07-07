@@ -25,7 +25,7 @@ namespace LiteRT.Unity
         }
 
         protected static readonly Lazy<ComputeShader> DefaultComputeShaderFloat32 = new(()
-            => Resources.Load<ComputeShader>("com.github.asus4.litert.unity/TextureToNativeTensorFloat32"));
+            => Resources.Load<ComputeShader>("com.koki-ibukuro.litert.unity/TextureToNativeTensorFloat32"));
 
         public static ComputeShader CloneDefaultComputeShaderFloat32()
         {
