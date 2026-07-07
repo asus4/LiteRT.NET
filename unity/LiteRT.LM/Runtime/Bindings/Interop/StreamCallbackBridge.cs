@@ -5,16 +5,9 @@ using System.Threading;
 
 namespace LiteRT.LM.Interop
 {
-    /// <summary>
-    /// AOT-safe bridge for <see cref="LiteRtLmStreamCallback"/> reverse P/Invoke.
-    ///
-    /// IL2CPP cannot marshal instance-method (closure) delegates to native function
-    /// pointers, so all streaming calls share one static callback and route per-call
-    /// state through <c>callback_data</c> as a pinned <see cref="GCHandle"/> to a
-    /// <see cref="Context"/>. Chunks arrive on a native background thread; the context
-    /// forwards them to the caller's <c>onChunk</c> on that thread and signals
-    /// completion via <see cref="Context.Wait"/>.
-    /// </summary>
+    // IL2CPP can't marshal instance delegates to native function pointers, so all streams share
+    // one static callback and pass per-call state as a GCHandle via callback_data.
+    // Chunks arrive on a native background thread.
     internal static class StreamCallbackBridge
     {
         internal sealed class Context : IDisposable
@@ -36,11 +29,7 @@ namespace LiteRT.LM.Interop
 
             internal void SetError(string error) => _error = error;
 
-            /// <summary>
-            /// Blocks until the final chunk arrives, then returns the concatenated text.
-            /// Throws on stream errors, except the engine's "Max number of tokens"
-            /// signal which is a normal length-limited stop.
-            /// </summary>
+            // The "Max number of tokens" error is a normal length-limited stop, not a failure.
             internal string Wait()
             {
                 _done.Wait();
@@ -54,10 +43,8 @@ namespace LiteRT.LM.Interop
             public void Dispose() => _done.Dispose();
         }
 
-        /// <summary>The shared static delegate instance, rooted for the process lifetime.</summary>
         internal static readonly LiteRtLmStreamCallback Callback = OnChunk;
 
-        /// <summary>Allocates the GCHandle passed to native as <c>callback_data</c>.</summary>
         internal static GCHandle Pin(Context context) => GCHandle.Alloc(context);
 
         [MonoPInvokeCallback(typeof(LiteRtLmStreamCallback))]

@@ -56,16 +56,11 @@ the LiteRT-LM docs. `LlmMessage` has helpers for building/parsing the JSON.
 
 ## Native libraries
 
-`Plugins/` ships the LiteRT-LM C API (`libLiteRtLmC`, built by
-`scripts/litert-lm-c/build.sh` in the LiteRT.NET repo) and its load-time dependency
-`libGemmaModelConstraintProvider` per platform:
+`Plugins/` ships `libLiteRtLmC` (built by the LiteRT.NET repo — not prebuilt upstream)
+and its load-time dependency `libGemmaModelConstraintProvider`:
 
-- `macOS/`: `libLiteRtLmC.dylib` + `libGemmaModelConstraintProvider.dylib`. GPU
-  inference (`backend: "gpu"`) additionally uses the Metal accelerator shipped with
-  the core package.
-- `Android/arm64-v8a/`, `Android/x86_64/`: `libLiteRtLmC.so` +
-  `libGemmaModelConstraintProvider.so`, 16 KB-page aligned. Requires IL2CPP + ARM64
-  target architectures and minSdk 24.
+- `macOS/`: dylibs; `backend: "gpu"` also uses the core package's Metal accelerator.
+- `Android/arm64-v8a/`, `Android/x86_64/`: 16 KB-page aligned `.so`; requires IL2CPP +
+  ARM64.
 - `iOS/`: `LiteRtLmC.xcframework` + `GemmaModelConstraintProvider.xcframework`
-  (device + simulator arm64, min iOS 15), imported by Unity as embedded dynamic
-  frameworks — symbols resolve via `[DllImport("__Internal")]`.
+  (min iOS 15), embedded dynamic frameworks resolved via `[DllImport("__Internal")]`.

@@ -6,11 +6,7 @@ using LiteRT.Interop;
 using LiteRT.Unity;
 using UnityEngine;
 
-/// <summary>
-/// Unity port of the MinimalInference console sample. Loads a small .tflite model from
-/// StreamingAssets, runs one CPU inference pass with a deterministic ramp input, and logs
-/// the output tensor to the Console.
-/// </summary>
+/// <summary>Unity port of the MinimalInference console sample.</summary>
 public sealed class MinimalInferenceBehaviour : MonoBehaviour
 {
     [Tooltip("Model file name inside Assets/StreamingAssets.")]
@@ -49,7 +45,6 @@ public sealed class MinimalInferenceBehaviour : MonoBehaviour
 
     void RunInference(LiteRtModel model)
     {
-        // Quiet CPU-only environment (no GPU/NPU plugin probing).
         using var env = new LiteRtEnvironment(LiteRtHwAccelerators.Cpu);
         using var compiled = new LiteRtCompiledModel(env, model, LiteRtHwAccelerators.Cpu);
 
@@ -67,7 +62,6 @@ public sealed class MinimalInferenceBehaviour : MonoBehaviour
                 int count = buffer.PackedByteSize / sizeof(float);
                 Debug.Log($"[LiteRT]   input '{signature.GetInputName(i)}': {buffer.ElementType}, {count} float element(s)");
 
-                // Fill with a simple ramp so the output is deterministic.
                 var data = new float[count];
                 for (int j = 0; j < count; j++) data[j] = j + 1;
                 buffer.Write(data);

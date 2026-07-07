@@ -1,20 +1,8 @@
 #!/usr/bin/env bash
-# Populates the per-RID native payloads (runtimes/<rid>/native, .gitignore'd) for the
-# LiteRT.NET packages (core -> src/LiteRT, LM -> src/LiteRT.LM, GPU -> src/LiteRT.Gpu.*),
-# from three best-effort sources (missing pieces warn, not fatal):
-#   - official LiteRT SDK             core + desktop/iOS GPU accelerators, ALL platforms.
-#                                     The committed core bindings match this SDK version's
-#                                     C ABI — LiteRT-LM/prebuilt/ tracks a newer LiteRT
-#                                     revision whose ABI differs (e.g. 3-arg
-#                                     LiteRtCreateModelFromFile), so core must NOT come
-#                                     from there. Bump CORE_SDK_BASE only together with a
-#                                     bindings review.
-#   - LiteRT-LM/prebuilt/<platform>/  LM payloads (Gemma plugin) + Android GPU accelerator
-#   - $LITERT_LM_OUT (default: out/)  locally built libLiteRtLmC (+ Gemma) per RID
-# Run before `dotnet pack`/`dotnet run`.
-#
-# Env: LITERT_LM_DIR (LiteRT-LM checkout, default ../LiteRT-LM), LITERT_LM_OUT (LM build
-# output, default <repo>/out), LITERT_RIDS (RIDs to populate, default all).
+# Populates src/*/runtimes/<rid>/native (best-effort) from the official SDK, LiteRT-LM/prebuilt/,
+# and locally built LM output. Run before `dotnet pack`/`dotnet run`.
+# Env: LITERT_LM_DIR (default ../LiteRT-LM), LITERT_LM_OUT (default <repo>/out), LITERT_RIDS.
+# Core must come from the SDK, not LiteRT-LM/prebuilt (newer, incompatible ABI); bump CORE_SDK_BASE only with a bindings review.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -46,14 +34,8 @@ prebuilt_platform() {
     esac
 }
 
-# Classify a native file by basename: core | gpu-metal | gpu-webgpu | gpu-opencl | lm | skip.
-# *Accelerator dylibs ship one-per-package so the consumer picks a backend by reference (the
-# core's probe order is hardcoded and registers the first one present).
-# *Sampler dylibs are skipped on macOS — neither works for LM today, so on-GPU sampling falls
-# back to CPU (correct output): the WebGpu sampler prebuilt is stale (missing UpdateConfig et al.
-# that current libLiteRtLmC requires), and the Metal sampler only engages under the Metal
-# accelerator, which mis-computes LM logits. Route one back to its package when a fixed prebuilt
-# appears.
+# classify <basename> -> core | gpu-metal | gpu-webgpu | gpu-opencl | lm | skip.
+# Samplers skipped on macOS: the WebGpu prebuilt is stale and the Metal one mis-computes LM logits.
 classify() {
     case "$1" in
         libLiteRt.dylib|libLiteRt.so|libLiteRt.dll|LiteRt.dll) echo "core" ;;
@@ -68,7 +50,6 @@ classify() {
     esac
 }
 
-# dest_dir <class> <rid> -> package runtimes dir.
 dest_dir() {
     case "$1" in
         core)       echo "$CORE_PKG/runtimes/$2/native" ;;
@@ -79,7 +60,6 @@ dest_dir() {
     esac
 }
 
-# Copy one shared library into its package (classify -> dest_dir).
 place_file() {
     local src="$1" rid="$2"
     local base; base="$(basename "$src")"
@@ -88,9 +68,7 @@ place_file() {
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
 
-    # iOS ships xcframework.zips, not loose dylibs — a bare .dylib can't be embedded/
-    # code-signed on iOS. Core is wrapped by build_ios_core_xcframework below; the LM
-    # engine + Gemma provider zips come from build.sh ios via place_lm_ios_xcframeworks.
+    # iOS ships xcframework.zips (see below), not loose dylibs — a bare .dylib can't be embedded/signed.
     if { [ "$class" = "core" ] || [ "$class" = "lm" ]; } && \
         { [[ "$rid" == ios-* ]] || [[ "$rid" == iossimulator-* ]]; }; then
         return 0
@@ -99,8 +77,7 @@ place_file() {
     local out; out="$(dest_dir "$class" "$rid")"
     mkdir -p "$out"
 
-    # Core is [DllImport("LiteRt")]; on Windows .NET resolves "LiteRt.dll" (no lib prefix).
-    # Plugins keep their as-linked names so dependents' dlopen finds them.
+    # Core is [DllImport("LiteRt")]; Windows resolves "LiteRt.dll" (no lib prefix).
     local name="$base"
     if [ "$class" = "core" ] && [[ "$rid" == win-* ]]; then
         name="LiteRt.dll"
@@ -110,10 +87,7 @@ place_file() {
     echo "  + $rid/$class  $name"
 }
 
-# LM payloads (Gemma plugin) for every RID; GPU accelerators for Android only (their
-# historical source — the SDK carries no libLiteRtGpuAccelerator.so). Desktop/iOS core
-# and GPU come from the SDK instead: prebuilt/ tracks a newer LiteRT revision whose C ABI
-# (3-arg LiteRtCreateModelFromFile et al.) does not match the committed bindings.
+# LM payloads for every RID; GPU accelerators Android-only (the SDK has none for Android). Never core: ABI mismatch.
 from_prebuilt() {
     local rid="$1" platform; platform="$(prebuilt_platform "$rid")"
     local dir="$LITERT_LM_DIR/prebuilt/$platform"
@@ -142,9 +116,7 @@ from_local_lm_out() {
     done
 }
 
-# Cross-built LM library for non-host RIDs: build.sh <src> out/<rid> <target> writes
-# per-RID subdirs (out/android-arm64, out/android-x64, ...; out/ios is handled by
-# place_lm_ios_xcframeworks below).
+# Cross-built LM library from out/<rid> subdirs (out/ios handled separately below).
 from_local_lm_out_rid() {
     local rid="$1"
     local dir="$LITERT_LM_OUT/$rid"
@@ -170,8 +142,7 @@ sdk_platform() {
     esac
 }
 
-# sdk_fetch_file <rid> <sdk-file> — download one SDK binary and place_file it (skips if
-# the destination already exists so re-runs stay offline-friendly).
+# sdk_fetch_file <rid> <sdk-file> — skips if already present so re-runs stay offline-friendly.
 sdk_fetch_file() {
     local rid="$1" file="$2"
     local token; token="$(sdk_platform "$rid")"
@@ -181,7 +152,7 @@ sdk_fetch_file() {
     local out; out="$(dest_dir "$class" "$rid")"
     local name="$file"
     if [ "$class" = "core" ] && [[ "$rid" == win-* ]]; then
-        name="LiteRt.dll"  # Core is [DllImport("LiteRt")]; .NET resolves "LiteRt.dll" on Windows.
+        name="LiteRt.dll"
     fi
     [ -f "$out/$name" ] && return 0
 
@@ -195,8 +166,7 @@ sdk_fetch_file() {
     fi
 }
 
-# Core (+ matching-generation GPU accelerator) from the official SDK. iOS core is NOT
-# placed as a loose dylib — build_ios_core_xcframework below wraps the SDK dylibs.
+# Core (+ matching GPU accelerator) from the SDK; iOS core is wrapped by build_ios_core_xcframework instead.
 fetch_from_sdk() {
     local rid="$1"
     case "$rid" in
@@ -244,14 +214,11 @@ for rid in $RIDS; do
     fetch_from_sdk "$rid"
 done
 
-# Build the iOS core xcframework.zip when an iOS RID is requested, from the SDK dylibs
-# (ABI-matched to the bindings — see header). macOS-only (needs xcodebuild).
+# Wrap the SDK dylibs into LiteRt.xcframework.zip when an iOS RID is requested; macOS-only (needs xcodebuild).
 build_ios_core_xcframework() {
     case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
     [ "$(uname -s)" = "Darwin" ] || { echo "  (skip iOS xcframework: not macOS)"; return 0; }
 
-    # Stage the SDK dylibs in the layout make-ios-xcframework.sh expects
-    # (<dir>/ios_arm64/libLiteRt.dylib + <dir>/ios_sim_arm64/libLiteRt.dylib).
     local stage="$CORE_PKG/runtimes/.sdk-ios"
     local token
     for token in ios_arm64 ios_sim_arm64; do
@@ -270,8 +237,7 @@ build_ios_core_xcframework() {
 }
 build_ios_core_xcframework
 
-# LM iOS payloads are prebuilt xcframework.zips (engine + Gemma provider) produced by
-# scripts/litert-lm-c/build.sh <src> out/ios ios — copy them if present.
+# LM iOS xcframework.zips come from scripts/litert-lm-c/build.sh <src> out/ios ios.
 place_lm_ios_xcframeworks() {
     case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
     local dir="$LITERT_LM_OUT/ios"

@@ -14,10 +14,7 @@ namespace LiteRT.Unity
         { }
     }
 
-    /// <summary>
-    /// ComputeBuffer doesn't support UInt8, so the compute shader runs as Float32
-    /// and the result is converted to UInt8 here in C#.
-    /// </summary>
+    /// <summary>ComputeBuffer has no UInt8 support, so the shader outputs Float32 and it is cast to UInt8 in C#.</summary>
     public sealed class TextureToNativeTensorUInt8 : TextureToNativeTensor
     {
         const int kJOB_BATCH_SIZE = 64;
@@ -40,7 +37,6 @@ namespace LiteRT.Unity
         public override NativeArray<byte> Transform(Texture input, in Matrix4x4 t)
         {
             NativeArray<byte> tensor = base.Transform(input, t);
-            // Reinterpret (byte * 4) as float
             NativeSlice<float> tensorF32 = tensor.Slice().SliceConvert<float>();
 
             var job = new CastFloat32toUInt8Job()
@@ -91,9 +87,7 @@ namespace LiteRT.Unity
         public override NativeArray<byte> Transform(Texture input, in Matrix4x4 t)
         {
             NativeArray<byte> tensor = base.Transform(input, t);
-            // Reinterpret (byte * 4) as float
             NativeSlice<float> sliceF32 = tensor.Slice().SliceConvert<float>();
-            // Reinterpret (byte * 4) as int
             NativeSlice<int> sliceI32 = tensorInt32.Slice().SliceConvert<int>();
 
             var job = new CastFloat32toInt32Job()

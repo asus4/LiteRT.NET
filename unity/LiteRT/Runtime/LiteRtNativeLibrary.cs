@@ -6,15 +6,8 @@ using UnityEngine;
 namespace LiteRT.Unity
 {
     /// <summary>
-    /// Resolves the directory that holds the LiteRT native libraries shipped inside this UPM
-    /// package's <c>Plugins/</c> folder, and hands it to the managed runtime.
-    ///
-    /// Unity does not use the .NET <c>deps.json</c> native-library search; it imports native
-    /// libraries as plugins. The core <c>libLiteRt</c> resolves through Unity's own plugin loader,
-    /// but the managed runtime still needs an absolute directory so it can <c>dlopen</c> accelerator
-    /// plugins by path (required for GPU; harmless for CPU). This helper locates that directory and
-    /// assigns it to <see cref="LiteRtRuntime.NativeLibraryDirectory"/> before the first
-    /// <c>LiteRtEnvironment</c> is created.
+    /// Sets <see cref="LiteRtRuntime.NativeLibraryDirectory"/> to this package's Plugins/ natives:
+    /// the runtime dlopens accelerator plugins by absolute path (required for GPU).
     /// </summary>
     public static class LiteRtNativeLibrary
     {
@@ -38,7 +31,6 @@ namespace LiteRT.Unity
             }
         }
 
-        /// <summary>The platform-specific core native library file name.</summary>
         public static string CoreLibraryFileName()
         {
             return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "LiteRt.dll"
@@ -46,18 +38,12 @@ namespace LiteRT.Unity
                 : "libLiteRt.so";
         }
 
-        /// <summary>
-        /// Locates the directory that contains the core native library, or <c>null</c> if it
-        /// can't be found.
-        /// </summary>
         public static string? ResolveNativeLibraryDirectory()
         {
             string core = CoreLibraryFileName();
 
 #if UNITY_EDITOR
-            // The core native libraries ship inside this package's Plugins/<platform> folder.
-            // Resolve the package on disk (works for both file: and registry/cache installs) and
-            // look in the host platform's subdirectory.
+            // Resolving the package on disk works for both file: and registry/cache installs.
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
                 typeof(LiteRtNativeLibrary).Assembly);
             if (package != null)
@@ -71,9 +57,7 @@ namespace LiteRT.Unity
 
             return null;
 #else
-            // In players Unity places native plugins where the OS loader (and DllImport) resolve
-            // them automatically. The absolute directory that accelerator dlopen needs is wired
-            // per-platform in a later milestone (GPU / IL2CPP players). Probe common locations.
+            // Players: per-platform wiring for accelerator dlopen comes later; probe common locations.
             string[] candidates =
             {
                 Path.Combine(Application.dataPath, "Plugins"),
@@ -92,7 +76,6 @@ namespace LiteRT.Unity
         }
 
 #if UNITY_EDITOR
-        // The Editor runs only on desktop hosts; map to the matching Plugins/ subdirectory.
         private static string EditorPluginSubdir()
         {
             return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows/x86_64"

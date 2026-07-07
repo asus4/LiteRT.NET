@@ -9,8 +9,8 @@ namespace LiteRT
     {
         private IntPtr _handle;
 
-        // When the model is created from an in-memory buffer the native runtime references
-        // that buffer for the model's lifetime, so we pin it and release on Dispose.
+        // Buffer-backed models: the native runtime references (not copies) the buffer,
+        // so it stays pinned until Dispose.
         private GCHandle _pinnedBuffer;
 
         private LiteRtModel(IntPtr handle, GCHandle pinnedBuffer = default)
@@ -30,13 +30,7 @@ namespace LiteRT
             return new LiteRtModel(handle);
         }
 
-        /// <summary>
-        /// Creates a model from an in-memory <c>.tflite</c>/<c>.litert</c> buffer. Use this where
-        /// no real file path exists — e.g. Unity on Android, where <c>StreamingAssets</c> lives
-        /// inside the APK and must be read via <c>UnityWebRequest</c>. The buffer is pinned for the
-        /// lifetime of the model (the native runtime references it, it does not copy), and released
-        /// when <see cref="Dispose"/> is called.
-        /// </summary>
+        /// <summary>The native runtime references (not copies) the buffer; it stays pinned until Dispose.</summary>
         public static unsafe LiteRtModel CreateFromBuffer(byte[] data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
@@ -58,19 +52,8 @@ namespace LiteRT
             }
         }
 
-        /// <summary>
-        /// Creates a model from caller-owned native memory, without pinning or copying. The runtime
-        /// references the buffer for the model's lifetime, so the memory at <paramref name="buffer"/>
-        /// must stay valid and immovable until the returned model is disposed. The caller owns the
-        /// memory — this method never frees it.
-        /// <para>
-        /// Use this to avoid the managed allocation of the <see cref="CreateFromBuffer(byte[])"/>
-        /// overload for large models. For example, Unity's
-        /// <c>NativeArray&lt;byte&gt;.ReadOnly</c> already lives in unmanaged memory; pass its
-        /// <c>NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr</c> here (the
-        /// <c>LiteRT.Unity</c> package wraps this in an extension method).
-        /// </para>
-        /// </summary>
+        /// <summary>Caller-owned native memory: must stay valid and immovable until the model is
+        /// disposed; never freed by this class.</summary>
         public static unsafe LiteRtModel CreateFromBuffer(IntPtr buffer, int length)
         {
             if (buffer == IntPtr.Zero) throw new ArgumentNullException(nameof(buffer));
@@ -82,7 +65,6 @@ namespace LiteRT
             return new LiteRtModel(handle);
         }
 
-        /// <summary>Number of signatures exposed by the model.</summary>
         public int SignatureCount
         {
             get
@@ -94,7 +76,6 @@ namespace LiteRT
             }
         }
 
-        /// <summary>Returns metadata for the signature at <paramref name="index"/>.</summary>
         public LiteRtSignature GetSignature(int index)
         {
             LiteRtException.ThrowIfError(
@@ -117,7 +98,6 @@ namespace LiteRT
         }
     }
 
-    /// <summary>Describes the inputs/outputs of one model signature.</summary>
     public sealed class LiteRtSignature
     {
         internal IntPtr Handle { get; }
@@ -167,11 +147,9 @@ namespace LiteRT
             return Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
         }
 
-        /// <summary>Element type and shape of the signature input at <paramref name="index"/>.</summary>
         public LiteRtRankedTensorType GetInputTensorType(int index) =>
             LiteRtRankedTensorType.FromTensor(GetInputTensor(index));
 
-        /// <summary>Element type and shape of the signature output at <paramref name="index"/>.</summary>
         public LiteRtRankedTensorType GetOutputTensorType(int index) =>
             LiteRtRankedTensorType.FromTensor(GetOutputTensor(index));
 

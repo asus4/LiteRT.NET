@@ -25,7 +25,7 @@ namespace LiteRT.Unity
     [CustomPropertyDrawer(typeof(FilePopupAttribute))]
     public class FilePopupDrawer : PropertyDrawer
     {
-        string[] displayNames = null;
+        string[]? displayNames;
         int selectedIndex = -1;
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -39,8 +39,8 @@ namespace LiteRT.Unity
 
             if (displayNames == null)
             {
-                string regex = (attribute as FilePopupAttribute).regex;
-                InitDisplayNames(regex);
+                string regex = ((FilePopupAttribute)attribute).regex;
+                displayNames = InitDisplayNames(regex);
             }
             if (displayNames.Length == 0)
             {
@@ -50,7 +50,7 @@ namespace LiteRT.Unity
 
             if (selectedIndex < 0)
             {
-                selectedIndex = FindSelectedIndex(property.stringValue);
+                selectedIndex = FindSelectedIndex(displayNames, property.stringValue);
             }
 
             EditorGUI.BeginProperty(position, label, property);
@@ -61,7 +61,7 @@ namespace LiteRT.Unity
             EditorGUI.EndProperty();
         }
 
-        private void InitDisplayNames(string regex)
+        private static string[] InitDisplayNames(string regex)
         {
             if (!Directory.Exists(Application.streamingAssetsPath))
             {
@@ -70,7 +70,7 @@ namespace LiteRT.Unity
 
             string[] fullPaths = Directory.GetFiles(Application.streamingAssetsPath, regex, SearchOption.AllDirectories);
 
-            displayNames = fullPaths.Select(f =>
+            return fullPaths.Select(f =>
             {
                 string path = f.Replace(Application.streamingAssetsPath, "")
                                .Replace('\\', '/');
@@ -82,11 +82,11 @@ namespace LiteRT.Unity
             }).ToArray();
         }
 
-        private int FindSelectedIndex(string value)
+        private static int FindSelectedIndex(string[] names, string value)
         {
-            for (int i = 0; i < displayNames.Length; i++)
+            for (int i = 0; i < names.Length; i++)
             {
-                if (displayNames[i] == value)
+                if (names[i] == value)
                 {
                     return i;
                 }

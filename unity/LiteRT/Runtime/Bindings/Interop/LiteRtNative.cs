@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace LiteRT.Interop
 {
-    /// <summary>Status codes returned by the LiteRT C API (litert_common.h).</summary>
+    // litert_common.h
     public enum LiteRtStatus
     {
         Ok = 0,
@@ -25,7 +25,7 @@ namespace LiteRT.Interop
         ErrorCompilation = 504,
     }
 
-    /// <summary>Hardware accelerator bit flags (litert_common.h).</summary>
+    // litert_common.h
     [Flags]
     public enum LiteRtHwAccelerators
     {
@@ -35,7 +35,7 @@ namespace LiteRT.Interop
         Npu = 1 << 2,
     }
 
-    /// <summary>Lock mode for a tensor buffer (litert_common.h).</summary>
+    // litert_common.h
     public enum LiteRtTensorBufferLockMode
     {
         Read = 0,
@@ -43,14 +43,14 @@ namespace LiteRT.Interop
         ReadWrite = 2,
     }
 
-    /// <summary>Environment option tags (litert_environment_options.h).</summary>
+    // litert_environment_options.h
     public enum LiteRtEnvOptionTag
     {
         RuntimeLibraryDir = 22,
         AutoRegisterAccelerators = 24,
     }
 
-    /// <summary>Value type held by a <c>LiteRtAny</c> (litert_any.h).</summary>
+    // litert_any.h
     public enum LiteRtAnyType
     {
         None = 0,
@@ -61,10 +61,7 @@ namespace LiteRT.Interop
         VoidPtr = 9,
     }
 
-    /// <summary>
-    /// Blittable mirror of <c>LiteRtAny</c> (litert_any.h): a 4-byte type tag,
-    /// 4 bytes padding, then an 8-byte union value (holds an int64, double, or pointer).
-    /// </summary>
+    // LiteRtAny (litert_any.h): 4-byte tag, 4 padding, 8-byte union (int64/double/pointer).
     [StructLayout(LayoutKind.Sequential)]
     internal struct LiteRtAnyNative
     {
@@ -73,10 +70,7 @@ namespace LiteRT.Interop
         public long Value;
     }
 
-    /// <summary>
-    /// Blittable mirror of <c>LiteRtEnvOption</c> (litert_environment_options.h):
-    /// a 4-byte tag, 4 bytes padding, then a 16-byte <see cref="LiteRtAnyNative"/> value.
-    /// </summary>
+    // LiteRtEnvOption (litert_environment_options.h): 4-byte tag, 4 padding, 16-byte LiteRtAnyNative.
     [StructLayout(LayoutKind.Sequential)]
     internal struct LiteRtEnvOptionNative
     {
@@ -85,7 +79,7 @@ namespace LiteRT.Interop
         public LiteRtAnyNative Value;
     }
 
-    /// <summary>Element type of a tensor (litert_model_types.h).</summary>
+    // litert_model_types.h
     public enum LiteRtElementType
     {
         None = 0,
@@ -108,35 +102,24 @@ namespace LiteRT.Interop
         Complex128 = 12,
     }
 
-    /// <summary>
-    /// Raw P/Invoke declarations for the LiteRT core C API (litert/c/*.h),
-    /// exported by libLiteRt. Opaque handles are represented as <see cref="IntPtr"/>.
-    /// <c>LiteRtParamIndex</c> (size_t) maps to <see cref="UIntPtr"/>.
-    /// The <c>LiteRtRankedTensorType</c> struct is treated as an opaque blob
-    /// (see <see cref="RankedTensorTypeSize"/>) to avoid cross-platform ABI bitfield issues.
-    /// </summary>
+    // LiteRT core C API (litert/c/*.h), exported by libLiteRt. LiteRtRankedTensorType is
+    // passed as an opaque RankedTensorTypeSize-byte blob to dodge cross-compiler bitfield ABI.
     internal static unsafe class LiteRtNative
     {
-        // iOS links the native code as an embedded framework whose symbols are resolved
-        // from the loaded image (dlsym(RTLD_DEFAULT)), so the P/Invoke target must be
-        // "__Internal". `__IOS__` covers .NET-for-iOS / MAUI; `UNITY_IOS` covers a Unity
-        // iOS device build (Unity does not define `__IOS__`). Neither symbol is defined by
-        // the plain `dotnet build` (netstandard2.1 / net8.0), so the shipped NuGet assembly
-        // keeps "LiteRt" and desktop / Android / Editor are unaffected.
+        // iOS resolves symbols from the loaded image, so P/Invoke must target "__Internal".
+        // UNITY_IOS covers Unity device builds (Unity doesn't define __IOS__); plain dotnet builds keep "LiteRt".
 #if __IOS__ || (UNITY_IOS && !UNITY_EDITOR)
         internal const string LibraryName = "__Internal";
 #else
         internal const string LibraryName = "LiteRt";
 #endif
 
-        // sizeof(LiteRtRankedTensorType): 4 (element_type) + sizeof(LiteRtLayout).
-        // LiteRtLayout is 68 bytes (non-MSVC) or 72 (MSVC). 128 is a safe upper bound.
+        // sizeof(LiteRtRankedTensorType) is 72 or 76 depending on compiler; 128 is a safe upper bound.
         internal const int RankedTensorTypeSize = 128;
 
         [DllImport(LibraryName)]
         internal static extern IntPtr LiteRtGetStatusString(LiteRtStatus status);
 
-        // --- Environment ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateEnvironment(
             int num_options, [In] LiteRtEnvOptionNative[] options, out IntPtr environment);
@@ -144,7 +127,6 @@ namespace LiteRT.Interop
         [DllImport(LibraryName)]
         internal static extern void LiteRtDestroyEnvironment(IntPtr environment);
 
-        // --- Model ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateModelFromFile(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string filename, out IntPtr model);
@@ -164,7 +146,6 @@ namespace LiteRT.Interop
         internal static extern LiteRtStatus LiteRtGetModelSignature(
             IntPtr model, UIntPtr signature_index, out IntPtr signature);
 
-        // --- Signature ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtGetNumSignatureInputs(
             IntPtr signature, out UIntPtr num_inputs);
@@ -189,13 +170,10 @@ namespace LiteRT.Interop
         internal static extern LiteRtStatus LiteRtGetSignatureOutputTensorByIndex(
             IntPtr signature, UIntPtr output_idx, out IntPtr tensor);
 
-        // --- Tensor ---
-        // ranked_tensor_type points to an opaque RankedTensorTypeSize-byte buffer.
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtGetRankedTensorType(
             IntPtr tensor, byte* ranked_tensor_type);
 
-        // --- Options ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateOptions(out IntPtr options);
 
@@ -206,7 +184,6 @@ namespace LiteRT.Interop
         internal static extern LiteRtStatus LiteRtSetOptionsHardwareAccelerators(
             IntPtr options, int hardware_accelerators);
 
-        // --- CompiledModel ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateCompiledModel(
             IntPtr environment, IntPtr model, IntPtr compilation_options,
@@ -231,12 +208,10 @@ namespace LiteRT.Interop
             UIntPtr num_input_buffers, IntPtr[] input_buffers,
             UIntPtr num_output_buffers, IntPtr[] output_buffers);
 
-        // --- TensorBufferRequirements ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtGetTensorBufferRequirementsBufferSize(
             IntPtr requirements, out UIntPtr buffer_size);
 
-        // --- TensorBuffer ---
         [DllImport(LibraryName)]
         internal static extern LiteRtStatus LiteRtCreateManagedTensorBufferFromRequirements(
             IntPtr env, byte* tensor_type, IntPtr requirements, out IntPtr buffer);

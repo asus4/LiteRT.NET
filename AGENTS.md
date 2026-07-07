@@ -5,11 +5,11 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 
 ## Reproduce
 
-Native binaries are generated, not committed — populate them first: run
-`scripts/fetch-natives.sh` (and `scripts/litert-lm-c/build.sh` for the LiteRT-LM C API,
-which isn't prebuilt upstream). See [README.md](README.md) for the exact commands.
+Native binaries are generated, not committed — populate them with `scripts/fetch-natives.sh`
+(plus `scripts/litert-lm-c/build.sh` for the LiteRT-LM C API, which isn't prebuilt
+upstream); exact commands in [README.md](README.md).
 
-For Unity, also sync the bindings + natives into the UPM package:
+Unity: sync bindings + natives into the UPM packages:
 
 ```sh
 scripts/sync-unity-bindings.sh                    # src/LiteRT -> unity/LiteRT/Runtime/Bindings
@@ -18,7 +18,7 @@ scripts/sync-unity-natives.sh                     # runtimes  -> unity/LiteRT/Pl
 
 ## Test
 
-Build the managed packages and run the examples as smoke tests:
+Smoke tests:
 
 ```sh
 dotnet build -c Release src/LiteRT/LiteRT.csproj

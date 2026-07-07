@@ -1,17 +1,8 @@
 #!/usr/bin/env bash
-# Copies the native libraries from the per-RID layout (src/<package>/runtimes/<rid>/native)
-# into the Unity packages' Plugins/ trees (unity/<package>/Plugins/<platform>). The .meta files
-# there are committed (stable GUIDs + platform settings); only the .gitignore'd binaries are
-# copied. Run `scripts/fetch-natives.sh` first to populate the source runtimes; the LM C library
-# additionally needs `scripts/litert-lm-c/build.sh`. CI runs these before `upm pack`. iOS core
-# iOS payloads are unzipped from the runtimes/ xcframework.zips (the NuGet payload) into
-# Plugins/iOS/<Name>.xcframework — Unity imports the bundle as a plugin and links/embeds
-# it via the committed .meta (iOS enabled + AddToEmbeddedBinaries).
-#
-# GPU accelerators: only one plugin per platform is shipped — the core probes a hardcoded,
-# ordered basename list and registers the first hit (see docs/gpu-accelerator-probe-order.md).
-# macOS gets Metal; Android gets the multi-backend GpuAccelerator (OpenCL+WebGPU+Vulkan),
-# which sits at probe index 0, so shipping the OpenCL-only dylib as well would be dead weight.
+# Copies native libraries from src/<package>/runtimes/<rid>/native into unity/<package>/Plugins/<platform>.
+# Run scripts/fetch-natives.sh first (the LM C library also needs scripts/litert-lm-c/build.sh).
+# Only one GPU accelerator ships per platform — the core registers the first probe hit
+# (see docs/gpu-accelerator-probe-order.md), so extra backends would be dead weight.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,8 +39,7 @@ for entry in "${MAP[@]}"; do
         mkdir -p "$(dirname "$dst")"
         case "$dst" in
             *.xcframework)
-                # NuGet ships the zip; Unity imports the unzipped .xcframework directly
-                # as a plugin (iOS enabled + AddToEmbeddedBinaries in the committed .meta).
+                # Unity imports the unzipped .xcframework as a plugin (embedded via the committed .meta).
                 rm -rf "$dst"
                 unzip -q "$src" -d "$(dirname "$dst")"
                 [ -d "$dst" ] || { echo "ERROR: $src did not contain $(basename "$dst") at its root" >&2; exit 1; }

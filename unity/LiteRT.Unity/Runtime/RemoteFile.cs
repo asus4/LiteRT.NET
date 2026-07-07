@@ -7,15 +7,7 @@ using UnityEngine.Networking;
 
 namespace LiteRT.Unity
 {
-    /// <summary>
-    /// Simple remote file download and cache system for large model files.
-    /// Not for production use.
-    ///
-    /// Downloads to <c>&lt;LocalPath&gt;.download</c> and renames on completion, so a partial
-    /// file is never mistaken for a complete one and interrupted downloads resume via an
-    /// HTTP <c>Range</c> request. The cached file name is the last path segment of the URL
-    /// (runtimes such as LiteRT-LM write their cache files next to the model file).
-    /// </summary>
+    /// <summary>Downloads and caches large model files. Not for production use.</summary>
     [Serializable]
     public class RemoteFile : IProgress<float>
     {
@@ -61,17 +53,12 @@ namespace LiteRT.Unity
             downloadLocation = location;
         }
 
-        // IProgress<float>
         public void Report(float value)
         {
             OnDownloadProgress?.Invoke(value);
         }
 
-        /// <summary>
-        /// Ensures the file is downloaded and cached locally, returning its local path.
-        /// Resumes a previous partial download when possible.
-        /// On iOS, the file is excluded from iCloud backup.
-        /// </summary>
+        /// <summary>Downloads (resuming a partial when possible) and returns the local path. Excluded from iCloud backup on iOS.</summary>
         public async Awaitable<string> EnsureLocal(CancellationToken cancellationToken)
         {
             string localPath = LocalPath;
@@ -87,8 +74,7 @@ namespace LiteRT.Unity
             long totalBytes = await GetSize(cancellationToken);
             long existingBytes = File.Exists(tempPath) ? new FileInfo(tempPath).Length : 0;
 
-            // A partial larger than the remote file means the URL now points at different
-            // content; start over.
+            // A partial larger than the remote file means the content changed; start over.
             if (totalBytes > 0 && existingBytes > totalBytes)
             {
                 File.Delete(tempPath);
@@ -123,8 +109,7 @@ namespace LiteRT.Unity
 
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    // 416: the range is no longer satisfiable (remote file changed) —
-                    // drop the partial and start over once.
+                    // 416: remote file changed — drop the partial and start over once.
                     if (resuming && request.responseCode == 416)
                     {
                         Log("Range not satisfiable; restarting download from scratch.");
@@ -134,9 +119,7 @@ namespace LiteRT.Unity
                     throw new IOException($"Failed to download from {url}: {request.error}");
                 }
 
-                // Server ignored the Range header and sent the whole file, which got
-                // appended onto the partial — the temp file is corrupt. Start over once
-                // (with no partial present, the retry sends no Range header).
+                // 200 while resuming: the full file got appended onto the partial — corrupt; start over once.
                 if (resuming && request.responseCode == 200)
                 {
                     Log("Server ignored the Range request; restarting download from scratch.");
@@ -151,10 +134,7 @@ namespace LiteRT.Unity
             return localPath;
         }
 
-        /// <summary>
-        /// Returns the file size in bytes: the cached/partial-aware remote size, or -1 if the
-        /// server reports none.
-        /// </summary>
+        /// <summary>Returns the file size in bytes, or -1 if the server reports none.</summary>
         public async Awaitable<long> GetSize(CancellationToken cancellationToken)
         {
             string localPath = LocalPath;

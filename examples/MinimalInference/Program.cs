@@ -8,8 +8,6 @@ string modelPath = args.Length > 0
     ? args[0]
     : Path.Combine(AppContext.BaseDirectory, "models", "sqrt_mean_mul_ops.tflite");
 
-// Second arg picks the accelerator: "cpu" (default), "gpu", or "cpu+gpu"
-// (GPU with CPU fallback for unsupported ops).
 string acceleratorArg = args.Length > 1 ? args[1].ToLowerInvariant() : "cpu";
 var accelerator = acceleratorArg switch
 {
@@ -26,8 +24,7 @@ if (!File.Exists(modelPath))
 
 Console.WriteLine($"Loading model: {modelPath} (accelerator: {accelerator})");
 
-// Auto-register CPU plus whatever the compiled model needs. Limiting the set keeps a
-// CPU-only run from probing (and warning about) GPU/NPU plugins it won't use.
+// Limiting auto-registration keeps CPU-only runs from probing missing GPU/NPU plugins.
 using var env = new LiteRtEnvironment(LiteRtHwAccelerators.Cpu | accelerator);
 using var model = LiteRtModel.CreateFromFile(modelPath);
 using var compiled = new LiteRtCompiledModel(env, model, accelerator);
@@ -46,8 +43,7 @@ try
         int count = buffer.PackedByteSize / sizeof(float);
         Console.WriteLine($"  input '{signature.GetInputName(i)}': {signature.GetInputTensorType(i)}, {count} float element(s)");
 
-        // Fill with a deterministic pattern. Values stay in a small range so
-        // fp16-based accelerators (e.g. Metal) don't overflow on image models.
+        // Small values so fp16 accelerators (e.g. Metal) don't overflow on image models.
         var data = new float[count];
         for (int j = 0; j < count; j++) data[j] = (j % 256) / 255f;
         buffer.Write(data);

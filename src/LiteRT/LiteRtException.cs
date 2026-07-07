@@ -4,7 +4,6 @@ using LiteRT.Interop;
 
 namespace LiteRT
 {
-    /// <summary>Thrown when a LiteRT C API call returns a non-OK status.</summary>
     public sealed class LiteRtException : Exception
     {
         public LiteRtStatus Status { get; }

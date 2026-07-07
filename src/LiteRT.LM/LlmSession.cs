@@ -6,14 +6,12 @@ using LiteRT.LM.Interop;
 
 namespace LiteRT.LM
 {
-    /// <summary>A single inference session created from an <see cref="LlmEngine"/>.</summary>
     public sealed class LlmSession : IDisposable
     {
         private IntPtr _session;
 
         internal LlmSession(IntPtr session) => _session = session;
 
-        /// <summary>Generates a full text response for a text prompt (blocking).</summary>
         public string GenerateContent(string prompt)
         {
             using var input = TextInput.Create(prompt);
@@ -39,10 +37,7 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>
-        /// Generates a response, invoking <paramref name="onChunk"/> for each streamed chunk.
-        /// Blocks until the stream completes and returns the full concatenated text.
-        /// </summary>
+        /// <summary>Blocks until done; <paramref name="onChunk"/> fires on a native background thread.</summary>
         public string GenerateContentStream(string prompt, Action<string> onChunk)
         {
             if (onChunk == null) throw new ArgumentNullException(nameof(onChunk));
@@ -68,7 +63,6 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>Requests cancellation of an in-progress generation.</summary>
         public void Cancel() => LiteRtLmNative.litert_lm_session_cancel_process(_session);
 
         public void Dispose()
@@ -80,7 +74,6 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>Marshals a UTF-8 text prompt into an unmanaged input array.</summary>
         private readonly struct TextInput : IDisposable
         {
             private readonly IntPtr _text;

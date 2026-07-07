@@ -1,21 +1,8 @@
 #!/usr/bin/env bash
-# Wraps the prebuilt iOS core dylibs (device + simulator) into a dynamic LiteRt.xcframework,
-# zipped, for the LiteRT package payload (runtimes/ios/native/).
-#
-# Why: a loose `.dylib` can't be code-signed/embedded on an iOS device build, so (matching
-# Microsoft.ML.OnnxRuntime) we ship a zipped `.xcframework`. The binary is renamed `LiteRt`
-# with install name `@rpath/LiteRt.framework/LiteRt`; iOS resolves symbols via
-# `[DllImport("__Internal")]` against the linked+embedded framework (see LiteRtNative.cs).
-# Consumed by Unity (sync-unity-natives.sh unzips into Plugins/iOS/<Name>.xcframework,
-# imported as a plugin with AddToEmbeddedBinaries) and, eventually, .NET-for-iOS / MAUI
-# (NativeReference).
-#
-# Usage: make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR]
-#   PREBUILT_DIR default ../LiteRT-LM/prebuilt (expects ios_arm64/, ios_sim_arm64/)
-#   OUT_DIR      default src/LiteRT/runtimes/ios/native
-# Env (defaults = the LiteRT core framework; override to wrap other prebuilt dylibs,
-# e.g. build.sh ios wraps libGemmaModelConstraintProvider this way):
-#   FRAMEWORK_NAME, SRC_DYLIB_NAME, BUNDLE_ID, MIN_OS
+# Wraps prebuilt iOS dylibs (device + simulator) into a zipped dynamic xcframework.
+# Usage: make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR] (expects <dir>/{ios_arm64,ios_sim_arm64}/<dylib>).
+# Env: FRAMEWORK_NAME, SRC_DYLIB_NAME, BUNDLE_ID, MIN_OS (defaults = LiteRt core; override to wrap other dylibs).
+# A loose .dylib can't be code-signed/embedded on iOS; symbols resolve via [DllImport("__Internal")].
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -75,7 +62,7 @@ mkdir -p "$OUT_DIR"
 rm -f "$OUT_ZIP"
 
 echo "Zipping -> $OUT_ZIP"
-# .xcframework as the top-level entry (matches onnxruntime.xcframework.zip).
+# .xcframework must be the top-level zip entry.
 ( cd "$WORK" && zip -qry "$OUT_ZIP" "$FRAMEWORK_NAME.xcframework" )
 
 echo "Done: $OUT_ZIP"

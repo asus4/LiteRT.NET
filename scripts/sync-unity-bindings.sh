@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Copies the canonical C# bindings (src/<project>) into the Unity packages so Unity compiles
-# them from source. Source (not the prebuilt DLL) is required because the iOS P/Invoke target
-# must be "__Internal" (see the `#if ... UNITY_IOS` in the *Native.cs files) — a precompiled
-# DLL bakes the shared-library name.
-# The committed copies keep the UPM packages self-contained; re-run after editing, CI diffs for drift.
+# Copies the canonical C# bindings (src/<project>) into the Unity packages; re-run after editing, CI diffs for drift.
+# Source, not the prebuilt DLL: the iOS P/Invoke target must switch to "__Internal", which a DLL bakes in.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

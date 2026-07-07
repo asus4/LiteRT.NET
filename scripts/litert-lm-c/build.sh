@@ -1,14 +1,7 @@
 #!/usr/bin/env bash
-# Builds libLiteRtLmC, a shared library exposing the LiteRT-LM C API (c/engine.h), by
-# dropping a small Bazel package into a LiteRT-LM checkout and building it with linkshared=1.
-#
-# Usage: build.sh <litert-lm-source-dir> <output-dir> [target]
-#   target: host (default)  -> <output-dir>/libLiteRtLmC.{so|dylib|dll} + Gemma provider
-#           android_arm64   -> <output-dir>/libLiteRtLmC.so   (needs ANDROID_NDK_HOME, r28b+)
-#           android_x86_64  -> <output-dir>/libLiteRtLmC.so
-#           ios             -> <output-dir>/{LiteRtLmC,GemmaModelConstraintProvider}.xcframework.zip
-#                              (macOS host only; device + simulator arm64 slices)
-# Env:   BAZEL (default: bazelisk if present, else bazel)
+# Builds libLiteRtLmC (LiteRT-LM C API shared library) by injecting a Bazel package into a LiteRT-LM checkout.
+# Usage: build.sh <litert-lm-source-dir> <output-dir> [host|android_arm64|android_x86_64|ios]
+# android targets need ANDROID_NDK_HOME (r28b+); ios needs a macOS host. Env: BAZEL (default bazelisk/bazel).
 set -euo pipefail
 
 SRC_DIR="${1:?usage: build.sh <litert-lm-source-dir> <output-dir> [host|android_arm64|android_x86_64|ios]}"
@@ -20,7 +13,6 @@ BAZEL="${BAZEL:-$(command -v bazelisk || command -v bazel)}"
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"  # absolute: zip/copy steps run from other directories
 
-# Inject the wrapper Bazel package into the checkout.
 PKG_DIR="$SRC_DIR/litert_lm_dotnet"
 mkdir -p "$PKG_DIR"
 cp "$SCRIPT_DIR/BUILD.bazel" "$PKG_DIR/BUILD"
@@ -29,9 +21,7 @@ cp "$SCRIPT_DIR/exported_symbols.lds" "$PKG_DIR/exported_symbols.lds"
 
 BIN_DIR="$SRC_DIR/bazel-bin/litert_lm_dotnet"
 
-# copy_prebuilt_provider <prebuilt-platform> <ext>
-# libLiteRtLmC load-time depends on @rpath/libGemmaModelConstraintProvider.* (rpath includes
-# @loader_path/$ORIGIN), so the plugin must sit beside it. We don't build it — copy the prebuilt.
+# copy_prebuilt_provider <prebuilt-platform> <ext> — libLiteRtLmC load-time depends on the provider beside it.
 copy_prebuilt_provider() {
     local plugin="$SRC_DIR/prebuilt/$1/libGemmaModelConstraintProvider.$2"
     if [ -f "$plugin" ]; then
@@ -118,8 +108,7 @@ build_ios() {
     unzip -q "$zip" -d "$work"
     [ -d "$work/LiteRtLmC.xcframework" ] || { echo "ERROR: LiteRtLmC.xcframework not at zip root of $zip" >&2; exit 1; }
 
-    # The Gemma provider ships as its own framework (a loose dylib can't be embedded
-    # on iOS), so repoint the engine's load command at the framework binary.
+    # Repoint the engine's Gemma dep at the framework binary (a loose dylib can't be embedded on iOS).
     local slice
     for slice in "$work/LiteRtLmC.xcframework"/*/LiteRtLmC.framework/LiteRtLmC; do
         chmod +w "$slice"
@@ -129,12 +118,10 @@ build_ios() {
             "$slice"
         codesign -f -s - "$slice" 2>/dev/null || true
 
-        # Sanity: C API exported, provider repointed, no dylib dep on LiteRt core.
-        # (grep -c, not -q: -q's early exit SIGPIPEs nm, which pipefail reports as failure.)
+        # Sanity checks. (grep -c, not -q: -q's early exit SIGPIPEs nm under pipefail.)
         [ "$(nm -gU "$slice" | grep -c ' _litert_lm_')" -gt 0 ] \
             || { echo "ERROR: $slice exports no litert_lm_* symbols" >&2; exit 1; }
-        # The statically linked core must stay private (see exported_symbols.lds): a leaked
-        # LiteRt* export can hijack the core package's __Internal P/Invoke bindings on iOS.
+        # A leaked LiteRt* export can hijack the core package's __Internal P/Invoke on iOS (see exported_symbols.lds).
         [ "$(nm -gU "$slice" | grep -c ' _LiteRt')" -eq 0 ] \
             || { echo "ERROR: $slice leaks LiteRt* core symbols (export list not applied?)" >&2; exit 1; }
         if otool -L "$slice" | grep -qE 'libLiteRt\.dylib|libGemmaModelConstraintProvider\.dylib'; then
@@ -147,7 +134,6 @@ build_ios() {
     rm -f "$OUT_DIR/LiteRtLmC.xcframework.zip"
     ( cd "$work" && /usr/bin/zip -qry "$OUT_DIR/LiteRtLmC.xcframework.zip" "LiteRtLmC.xcframework" )
 
-    # Wrap the prebuilt provider dylibs (device + simulator) into their own xcframework.
     FRAMEWORK_NAME="GemmaModelConstraintProvider" \
     SRC_DYLIB_NAME="libGemmaModelConstraintProvider.dylib" \
     BUNDLE_ID="com.koki-ibukuro.litertlm.GemmaModelConstraintProvider" \

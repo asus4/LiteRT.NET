@@ -1,19 +1,9 @@
 name: release-unity
 
-# Packs and signs the Unity UPM packages (unity/LiteRT, unity/LiteRT.Unity and
-# unity/LiteRT.LM) and attaches the .tgz archives to a GitHub Release. OpenUPM consumes
-# the release assets (trackingMode: githubRelease), so the native binaries only need to
-# exist in the package folder at `upm pack` time — they stay .gitignore'd in the repo.
-#
-# Trigger: push a tag like `v0.1.0` (must match both package.json versions), or run
-# manually via workflow_dispatch to test packing/signing — the dispatch path uploads
-# the .tgz as a workflow artifact and does NOT create a release.
-#
-# Secrets (Unity service account with package-signing permission for the org):
-#   UPM_SERVICE_ACCOUNT_KEY_ID, UPM_SERVICE_ACCOUNT_KEY_SECRET, UPM_ORG_ID
-#
-# Reference: https://github.com/openupm/com.example.signed-upm
-#            https://openupm.com/docs/signing-upm-packages.html
+# Packs and signs the Unity UPM packages and attaches the .tgz archives to a GitHub Release,
+# which OpenUPM consumes — natives only need to exist at `upm pack` time, they stay .gitignore'd.
+# Trigger: push a v* tag matching the package.json versions; workflow_dispatch only uploads an artifact, no release.
+# Secrets: UPM_SERVICE_ACCOUNT_KEY_ID, UPM_SERVICE_ACCOUNT_KEY_SECRET, UPM_ORG_ID (signing-capable Unity service account).
 
 on:
   push:
@@ -47,8 +37,6 @@ jobs:
         with:
           path: litert-net
 
-      # The released packages must match the tag: both package.json versions and the
-      # inter-package dependency have to equal the tag without its leading `v`.
       - name: Verify tag matches package versions
         if: startsWith(github.ref, 'refs/tags/v')
         working-directory: litert-net
@@ -67,8 +55,7 @@ jobs:
             exit 1
           fi
 
-      # The prebuilt binaries must share the C ABI of the committed bindings, so default
-      # to the latest LiteRT-LM release tag instead of main (which can drift).
+      # Default to the latest release tag, not main — the C ABI must match the committed bindings.
       - name: Resolve LiteRT-LM ref
         id: litert-lm
         env:
@@ -83,8 +70,6 @@ jobs:
           echo "Using LiteRT-LM ref: $REF"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
 
-      # LiteRT-LM ships the prebuilt core (libLiteRt) under prebuilt/<platform>/, which
-      # fetch-natives.sh consumes for desktop + iOS (Android core comes from the SDK).
       - name: Checkout LiteRT-LM (prebuilt core natives)
         uses: actions/checkout@v6
         with:
@@ -93,9 +78,7 @@ jobs:
           path: litert-lm
           lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
-      # libLiteRtLmC is not prebuilt upstream; pull the most recent successful
-      # build-natives artifact so the LM package ships its natives.
-      # TODO: promote build-natives outputs to a GitHub Release for a pinned source.
+      # libLiteRtLmC is not prebuilt upstream. TODO: promote build-natives outputs to a release for a pinned source.
       - name: Fetch libLiteRtLmC from the latest build-natives run
         working-directory: litert-net
         env:
@@ -118,16 +101,16 @@ jobs:
           LITERT_LM_DIR: ${{ github.workspace }}/litert-lm
         run: |
           chmod +x scripts/*.sh
-          scripts/fetch-natives.sh            # -> src/LiteRT/runtimes/<rid>/native (+ src/LiteRT.LM, GPU pkgs)
-          scripts/sync-unity-natives.sh       # -> unity/<package>/Plugins/<platform>
-          scripts/sync-unity-bindings.sh      # -> unity/<package>/Runtime/Bindings
+          scripts/fetch-natives.sh
+          scripts/sync-unity-natives.sh
+          scripts/sync-unity-bindings.sh
 
       - name: Verify the bindings synced clean (no drift)
         working-directory: litert-net
         run: git diff --exit-code unity/LiteRT/Runtime/Bindings unity/LiteRT.LM/Runtime/Bindings
 
-      # Guard against Git LFS pointer files sneaking into the package as "binaries".
-      - name: Verify plugins are real binaries (not LFS pointers)
+      # fetch-natives.sh is best-effort — catch empty payloads before packing.
+      - name: Verify native plugin payloads
         working-directory: litert-net
         run: |
           file unity/LiteRT/Plugins/macOS/libLiteRt.dylib | grep Mach-O
@@ -138,7 +121,7 @@ jobs:
           file unity/LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework/ios-arm64/LiteRtLmC.framework/LiteRtLmC | grep Mach-O
           file unity/LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework/ios-arm64/GemmaModelConstraintProvider.framework/GemmaModelConstraintProvider | grep Mach-O
           find unity/LiteRT/Plugins unity/LiteRT.LM/Plugins -type f ! -name '*.meta' ! -name 'Info.plist' -size -1k | grep . && {
-            echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
+            echo "::error::Suspiciously small plugin files found"; exit 1; } || true
 
       - name: Install Unity UPM CLI
         run: |
@@ -163,7 +146,6 @@ jobs:
             tar -tzf "$a" | grep -Fx 'package/.attestation.p7m'
           done
 
-      # Dispatch runs are for testing: expose the archives as a workflow artifact.
       - name: Upload archives as workflow artifact
         uses: actions/upload-artifact@v7
         with:

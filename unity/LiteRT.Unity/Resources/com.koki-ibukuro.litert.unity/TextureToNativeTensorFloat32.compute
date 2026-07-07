@@ -1,15 +1,13 @@
 ﻿#pragma kernel TextureToTensor
 
-// Enables mean and stddev offset
 #pragma multi_compile_local __ USE_OFFSET
-// Enables 4-channel input
 #pragma multi_compile_local __ USE_4CH_TENSOR
 
 Texture2D<float4> _InputTex;
 
 #if USE_4CH_TENSOR
 RWStructuredBuffer<float4> _OutputTensor;
-#else // 3ch by default
+#else
 RWStructuredBuffer<float3> _OutputTensor;
 #endif // USE_4CH_TENSOR
 
@@ -35,7 +33,7 @@ void TextureToTensor (uint2 id : SV_DispatchThreadID)
     uv = mul(_TransformMatrix, float4(uv, 0, 1)).xy;
 
     float4 color = any(uv < 0) || any(uv > 1)
-        ? float4(0, 0, 0, 1) // Set to black the outside
+        ? float4(0, 0, 0, 1)
         : _InputTex.SampleLevel(linearClampSampler, uv, 0);
 
     #if USE_OFFSET
@@ -45,10 +43,9 @@ void TextureToTensor (uint2 id : SV_DispatchThreadID)
     // Flip Y axis
     uint tid = (_OutputSize.y - 1 - id.y) * _OutputSize.x + id.x;
 
-    // Write to output tensor
     #if USE_4CH_TENSOR
     _OutputTensor[tid] = color;
-    #else // 3ch by default
+    #else
     _OutputTensor[tid] = color.rgb;
     #endif // USE_4CH_TENSOR
 }

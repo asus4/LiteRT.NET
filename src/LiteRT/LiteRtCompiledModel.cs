@@ -4,10 +4,6 @@ using LiteRT.Interop;
 
 namespace LiteRT
 {
-    /// <summary>
-    /// A compiled, ready-to-run LiteRT model. Create input/output buffers with the
-    /// <c>CreateInputBuffer</c>/<c>CreateOutputBuffer</c> helpers, then call <see cref="Run"/>.
-    /// </summary>
     public sealed unsafe class LiteRtCompiledModel : IDisposable
     {
         private readonly LiteRtEnvironment _environment;
@@ -37,7 +33,6 @@ namespace LiteRT
             }
         }
 
-        /// <summary>Allocates an input buffer for the given signature input.</summary>
         public LiteRtTensorBuffer CreateInputBuffer(LiteRtSignature signature, int inputIndex)
         {
             var tensor = signature.GetInputTensor(inputIndex);
@@ -48,7 +43,6 @@ namespace LiteRT
             return CreateBuffer(tensor, req);
         }
 
-        /// <summary>Allocates an output buffer for the given signature output.</summary>
         public LiteRtTensorBuffer CreateOutputBuffer(LiteRtSignature signature, int outputIndex)
         {
             var tensor = signature.GetOutputTensor(outputIndex);
@@ -76,7 +70,6 @@ namespace LiteRT
             return new LiteRtTensorBuffer(buffer, elementType);
         }
 
-        /// <summary>Runs the given signature synchronously.</summary>
         public void Run(LiteRtSignature signature,
             IReadOnlyList<LiteRtTensorBuffer> inputs, IReadOnlyList<LiteRtTensorBuffer> outputs)
         {

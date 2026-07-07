@@ -1,10 +1,7 @@
 <Project>
   <!--
-    Auto-imported by NuGet (packed as build/<PackageId>.targets) when one of the
-    LiteRT.NET native-only packages is consumed via PackageReference. Copies the host
-    RID's native files flat into the consumer's output directory for desktop
-    `dotnet build` + run. (`dotnet run` also gets runtimes/<rid>/native via
-    deps.json, but the flat copy keeps plain build output self-contained.)
+    Auto-imported by NuGet (packed as build/<PackageId>.targets) for PackageReference consumers:
+    copies the host RID's natives flat into the output dir so plain `dotnet build` output is self-contained.
   -->
   <PropertyGroup>
     <_LiteRtArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_LiteRtArch>

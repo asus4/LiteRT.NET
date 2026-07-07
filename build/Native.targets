@@ -1,14 +1,8 @@
 <Project>
   <!--
-    Shared MSBuild logic for the LiteRT.NET GPU/native-only packaging projects.
-    Each such csproj imports this file. It:
-      1. Packs every runtimes/<rid>/native/* file into the nupkg under runtimes/.
-      2. For ProjectReference consumers (examples / local dev), copies the
-         HOST RID's native files flat into the consuming project's output dir
-         so [DllImport] resolves them with no environment variable.
-    External PackageReference consumers resolve runtimes/<rid>/native via
-    deps.json (NATIVE_DLL_SEARCH_DIRECTORIES); see build/<id>.targets for the
-    desktop copy used when this package is consumed from a NuGet feed.
+    Shared packaging logic for the native-only projects: packs runtimes/** into the nupkg and
+    flattens the host RID into ProjectReference consumers' output so [DllImport] resolves.
+    PackageReference consumers get the flat copy via build/<id>.targets instead.
   -->
 
   <PropertyGroup>
@@ -20,7 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Pack all RIDs into the package; never copy the full set to output. -->
     <None Include="$(MSBuildProjectDirectory)/runtimes/**"
           Exclude="$(MSBuildProjectDirectory)/runtimes/.*;$(MSBuildProjectDirectory)/runtimes/**/.*;$(MSBuildProjectDirectory)/runtimes/**/.*/**"
           Pack="true"
@@ -28,7 +21,6 @@
           CopyToOutputDirectory="Never"
           Visible="false" />
 
-    <!-- Flatten the host RID into the consumer's bin for ProjectReference/dev. -->
     <None Update="$(MSBuildProjectDirectory)/runtimes/$(LiteRtHostRid)/native/*"
           CopyToOutputDirectory="PreserveNewest"
           Link="%(Filename)%(Extension)" />

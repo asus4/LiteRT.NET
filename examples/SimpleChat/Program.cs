@@ -20,7 +20,7 @@ if (!File.Exists(modelPath))
     return 1;
 }
 
-// Quiet the native INFO logging; raise to 2 (INFO) to see engine details.
+// 3 quiets native INFO logging; use 2 to see engine details.
 LlmEngine.SetMinLogLevel(3);
 
 Console.WriteLine($"Loading model: {modelPath} (backend: {backend})");

@@ -1,23 +1,13 @@
-# Bazel package that wraps the LiteRT-LM C API (//c:engine) into a single
-# self-contained shared library exporting the `litert_lm_*` symbols.
-#
-# This file is copied into a checkout of the LiteRT-LM repository (see build.sh)
-# as `//litert_lm_dotnet/BUILD` and built with:
-#     bazel build //litert_lm_dotnet:LiteRtLmC                    (host / android)
-#     bazel build //litert_lm_dotnet:LiteRtLmC_xcframework        (iOS, macOS host)
-#
-# `//c:engine` is declared `alwayslink = True`, so all of its exported symbols
-# (visibility("default") / __declspec(dllexport)) survive into the shared object,
-# and the LiteRT core runtime is statically linked in for a self-contained CPU build.
+# Wraps the LiteRT-LM C API (//c:engine) into a self-contained shared library.
+# Copied into a LiteRT-LM checkout as //litert_lm_dotnet/BUILD by build.sh.
+# //c:engine is alwayslink, so its exports survive; the LiteRT core runtime is statically linked in.
 
 load("@build_bazel_rules_apple//apple:apple.bzl", "apple_xcframework")
 
 cc_binary(
     name = "LiteRtLmC",
     linkopts = select({
-        # Mirror upstream //c:litert-lm's Linux/Android flags, plus an explicit
-        # 16 KB max-page-size so the .so stays loadable on 16 KB-page Android
-        # devices regardless of NDK-default drift (Unity meta: Is16KbAligned).
+        # Upstream //c:litert-lm flags + explicit 16 KB max-page-size for 16 KB-page Android devices.
         "@platforms//os:android": [
             "-Wl,--no-undefined",
             "-Wl,--strip-all",
@@ -35,11 +25,7 @@ cc_binary(
     ],
 )
 
-# iOS: a loose dylib can't be embedded/signed on device, so ship a dynamic
-# xcframework instead (device + simulator arm64), mirroring the upstream
-# //swift:CLiteRTLM recipe. `exported_symbols` keeps the litert_lm_* C symbols
-# visible despite -fvisibility=hidden; Unity resolves them via
-# [DllImport("__Internal")] once the framework is linked into UnityFramework.
+# iOS: a loose dylib can't be embedded/signed on device, so ship a dynamic xcframework.
 cc_library(
     name = "LiteRtLmC_lib",
     hdrs = [
@@ -56,9 +42,7 @@ apple_xcframework(
     name = "LiteRtLmC_xcframework",
     bundle_id = "com.koki-ibukuro.litertlm.LiteRtLmC",
     bundle_name = "LiteRtLmC",
-    # Export ONLY litert_lm_*: the statically linked LiteRT core must not leak LiteRt*
-    # exports, or iOS __Internal P/Invoke can bind the core package's calls to this
-    # framework's (newer, ABI-incompatible) copy instead of LiteRt.framework.
+    # Export ONLY litert_lm_*: leaked LiteRt* exports can hijack the core package's __Internal P/Invoke.
     exported_symbols_lists = ["exported_symbols.lds"],
     features = ["exported_symbols"],
     infoplists = ["Info.plist"],

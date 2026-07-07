@@ -10,44 +10,22 @@ using UnityEngine.Networking;
 
 namespace LiteRT.Unity
 {
-    /// <summary>
-    /// Loads a <see cref="LiteRtModel"/> from a path, picking the cheapest correct strategy for
-    /// where the file actually lives, and running the slow native parse off the main thread.
-    ///
-    /// <list type="bullet">
-    /// <item>A real filesystem path (e.g. <c>Application.persistentDataPath</c>, or
-    /// <c>StreamingAssets</c> on desktop) is opened directly with
-    /// <see cref="LiteRtModel.CreateFromFile"/> — no download, no copy.</item>
-    /// <item>A URL-style path (Android <c>StreamingAssets</c>, a <c>jar:file://…</c> URL inside the
-    /// APK, or <c>http(s)://</c>) is fetched with <see cref="UnityWebRequest"/>, copied once into a
-    /// persistent buffer this loader owns, and handed to LiteRT as an in-memory model.</item>
-    /// </list>
-    ///
-    /// The loader owns the model and any backing buffer; disposing it releases both in the correct
-    /// order. Reusing the same loader for another <see cref="LoadFromPathAsync"/> disposes the previous
-    /// model first. Not designed for concurrent loads on a single instance.
-    /// </summary>
+    /// <summary>Loads a model from a path or URL; owns the model and backing buffer. Not safe for concurrent loads.</summary>
     public sealed class LiteRtModelLoader : IDisposable
     {
-        // Persistent copy of the model bytes for the URL branch; default (not created) for the
-        // file branch, which lets the native runtime read the file directly.
+        // Only created for the URL branch; the file branch lets the native runtime read directly.
         private NativeArray<byte> data;
 
-        /// <summary>The most recently loaded model, or <c>null</c> before the first successful load.</summary>
         public LiteRtModel? Model { get; private set; }
 
         public void Dispose() => DisposeModel();
 
-        /// <summary>
-        /// Loads a model from <paramref name="path"/>. Paths containing <c>"://"</c> are treated as
-        /// URLs and fetched via <see cref="UnityWebRequest"/>; everything else is treated as a real
-        /// filesystem path and opened directly. The returned model is owned by this loader.
-        /// </summary>
         public async ValueTask<LiteRtModel> LoadFromPathAsync(string path, CancellationToken cancellationToken = default)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             if (path.Length == 0) throw new ArgumentException("Path is empty.", nameof(path));
 
+            DisposeModel();
             if (path.Contains("://"))
             {
                 Model = await LoadFromUrlAsync(path, cancellationToken);
@@ -76,9 +54,7 @@ namespace LiteRT.Unity
 
         private async ValueTask<LiteRtModel> LoadFromUrlAsync(string url, CancellationToken cancellationToken)
         {
-            // Download on the main thread (UnityWebRequest is main-thread only), and copy the
-            // bytes into a persistent buffer this loader owns so the model can reference them
-            // after the request is disposed.
+            // UnityWebRequest is main-thread only; copy the bytes so they outlive the request.
             using (var request = UnityWebRequest.Get(url))
             {
                 await request.SendWebRequest();
@@ -98,7 +74,6 @@ namespace LiteRT.Unity
                 src.CopyTo(data);
             }
 
-            // Run the slow native parse off the main thread.
             await Awaitable.BackgroundThreadAsync();
             try
             {

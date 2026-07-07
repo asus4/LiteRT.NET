@@ -3,17 +3,12 @@ using System.Text;
 
 namespace LiteRT.LM
 {
-    /// <summary>
-    /// Minimal JSON helpers for the LiteRT-LM Conversation message format.
-    /// Hand-rolled because the bindings must compile in Unity (netstandard2.1)
-    /// where System.Text.Json is not available.
-    /// </summary>
+    /// <summary>Hand-rolled JSON helpers: Unity (netstandard2.1) has no System.Text.Json.</summary>
     public static class LlmMessage
     {
-        /// <summary>Builds a user message: <c>{"role":"user","content":[{"type":"text","text":...}]}</c>.</summary>
+        /// <summary><c>{"role":"user","content":[{"type":"text","text":...}]}</c></summary>
         public static string UserText(string text) => RoleText("user", text);
 
-        /// <summary>Builds a message with the given role and a single text content part.</summary>
         public static string RoleText(string role, string text)
         {
             if (role == null) throw new ArgumentNullException(nameof(role));
@@ -27,17 +22,11 @@ namespace LiteRT.LM
             return sb.ToString();
         }
 
-        // Note: no builder for a {"type":"text",...} system-message content object on purpose.
-        // The conversation config accepts the raw instruction text (kept as plain string
-        // content), which every chat template handles; a content *object* reaches
-        // string-concat templates (e.g. Qwen's) as a map and fails to render.
+        // Intentionally no {"type":"text",...} content-object builder: string-concat chat
+        // templates (e.g. Qwen) fail on a map, while plain string content always renders.
 
-        /// <summary>
-        /// Extracts and concatenates the <c>"text"</c> values of a message or stream-chunk
-        /// JSON (<c>{"content":[{"type":"text","text":"..."}, ...]}</c>). Returns false when
-        /// the JSON has no text parts (e.g. tool calls only). Consumers needing the full
-        /// structure (tools, channels) should use the raw JSON APIs instead.
-        /// </summary>
+        /// <summary>Concatenates the <c>"text"</c> values of a message/chunk JSON;
+        /// false when there are no text parts (e.g. tool calls only).</summary>
         public static bool TryExtractText(string json, out string text)
         {
             if (string.IsNullOrEmpty(json))
@@ -81,8 +70,7 @@ namespace LiteRT.LM
             return i;
         }
 
-        /// <summary>Reads a JSON string starting at the opening quote; appends the unescaped
-        /// value and returns the index just past the closing quote.</summary>
+        // Appends the unescaped value; returns the index just past the closing quote.
         private static int ReadJsonString(string json, int openQuote, StringBuilder sb)
         {
             int i = openQuote + 1;

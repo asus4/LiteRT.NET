@@ -3,10 +3,7 @@ using LiteRT.LM.Interop;
 
 namespace LiteRT.LM
 {
-    /// <summary>
-    /// A LiteRT-LM engine loaded from a <c>.litertlm</c> model file. Create one
-    /// engine per model and reuse it to spawn <see cref="LlmSession"/> instances.
-    /// </summary>
+    /// <summary>Create one engine per <c>.litertlm</c> model and reuse it to spawn sessions/conversations.</summary>
     public sealed class LlmEngine : IDisposable
     {
         private IntPtr _settings;
@@ -20,17 +17,13 @@ namespace LiteRT.LM
 
         internal IntPtr Handle => _engine;
 
-        /// <summary>Loads an engine from a model file.</summary>
-        /// <param name="modelPath">Path to a <c>.litertlm</c> model.</param>
-        /// <param name="backend">Backend identifier, e.g. "cpu" or "gpu".</param>
-        /// <param name="maxNumTokens">Optional max token budget (ignored when &lt;= 0).</param>
+        /// <param name="backend">"cpu" or "gpu".</param>
+        /// <param name="maxNumTokens">Ignored when &lt;= 0.</param>
         public static LlmEngine Create(string modelPath, string backend = "cpu", int maxNumTokens = 0)
         {
             if (modelPath == null) throw new ArgumentNullException(nameof(modelPath));
 
-            // The engine's internal LiteRT environment has no RuntimeLibraryDir, so the
-            // GPU registry dlopens accelerators by bare leaf name. Pre-load them by
-            // absolute path so that lookup resolves to an already-loaded image.
+            // See NativeAccelerators: bare-name dlopen only resolves already-loaded images.
             if (!string.Equals(backend, "cpu", StringComparison.OrdinalIgnoreCase))
             {
                 NativeAccelerators.PreloadGpu();
@@ -57,14 +50,11 @@ namespace LiteRT.LM
             return new LlmEngine(settings, engine);
         }
 
-        /// <summary>Sets the global minimum log level (0=VERBOSE .. 5=FATAL, 1000=SILENT).</summary>
+        /// <summary>0=VERBOSE .. 5=FATAL, 1000=SILENT.</summary>
         public static void SetMinLogLevel(int level) => LiteRtLmNative.litert_lm_set_min_log_level(level);
 
-        /// <summary>Creates a new inference session using the default session config.</summary>
         public LlmSession CreateSession() => CreateSession(null);
 
-        /// <summary>Creates a new inference session.</summary>
-        /// <param name="samplerParams">Optional sampler parameters; null uses defaults.</param>
         public LlmSession CreateSession(LiteRtLmSamplerParams? samplerParams)
         {
             IntPtr config = IntPtr.Zero;
@@ -93,11 +83,8 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>Creates a new multi-turn conversation using the default config.</summary>
         public LlmConversation CreateConversation() => CreateConversation(null);
 
-        /// <summary>Creates a new multi-turn conversation.</summary>
-        /// <param name="options">Optional conversation options; null uses defaults.</param>
         public LlmConversation CreateConversation(LlmConversationOptions? options)
         {
             IntPtr config = IntPtr.Zero;
@@ -110,11 +97,8 @@ namespace LiteRT.LM
 
                     if (options.SystemInstruction != null)
                     {
-                        // Pass the raw text, not a {"type":"text",...} content object: the C API
-                        // keeps an unparseable string as plain string content, which every chat
-                        // template accepts. A content *object* is a map in the template engine and
-                        // breaks string-concat templates (e.g. Qwen's "'...' + content"); the data
-                        // processors only normalize string/array content, never a bare object.
+                        // Raw text, not a {"type":"text",...} object: every chat template accepts
+                        // plain string content, but a content object breaks string-concat templates (e.g. Qwen).
                         LiteRtLmNative.litert_lm_conversation_config_set_system_message(
                             config, options.SystemInstruction);
                     }

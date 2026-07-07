@@ -4,22 +4,15 @@ using LiteRT.LM.Interop;
 
 namespace LiteRT.LM
 {
-    /// <summary>
-    /// A multi-turn conversation created from an <see cref="LlmEngine"/>. The conversation
-    /// applies the model's prompt template, keeps the dialogue history in the KV cache,
-    /// and exchanges messages as JSON (see <see cref="LlmMessage"/> for the format).
-    ///
-    /// The <c>*Json</c> methods are the lossless tier (tool calls, channels, multimodal
-    /// content); <see cref="SendMessage"/> / <see cref="SendMessageStream"/> are text-only
-    /// conveniences. Streaming callbacks are invoked on a native background thread.
-    /// </summary>
+    /// <summary>Multi-turn conversation; history lives in the KV cache. The <c>*Json</c> methods are
+    /// lossless (tools, channels, multimodal); <see cref="SendMessage"/>/<see cref="SendMessageStream"/>
+    /// are text-only. Streaming callbacks fire on a native background thread.</summary>
     public sealed class LlmConversation : IDisposable
     {
         private IntPtr _conversation;
 
         internal LlmConversation(IntPtr conversation) => _conversation = conversation;
 
-        /// <summary>Sends a message JSON and returns the raw response JSON (blocking).</summary>
         public string SendMessageJson(string messageJson, string? extraContextJson = null)
         {
             if (messageJson == null) throw new ArgumentNullException(nameof(messageJson));
@@ -42,11 +35,6 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>
-        /// Sends a message JSON and invokes <paramref name="onChunkJson"/> for each streamed
-        /// chunk JSON <b>on a background thread</b>. Blocks until the stream completes and
-        /// returns the concatenated chunk payload.
-        /// </summary>
         public string SendMessageStreamJson(
             string messageJson, Action<string> onChunkJson, string? extraContextJson = null)
         {
@@ -73,7 +61,6 @@ namespace LiteRT.LM
             }
         }
 
-        /// <summary>Sends user text and returns the response text (blocking).</summary>
         public string SendMessage(string text)
         {
             string responseJson = SendMessageJson(LlmMessage.UserText(text));
@@ -82,11 +69,6 @@ namespace LiteRT.LM
                 : string.Empty;
         }
 
-        /// <summary>
-        /// Sends user text, invoking <paramref name="onTextChunk"/> with the text of each
-        /// streamed chunk <b>on a background thread</b>. Blocks until the stream completes
-        /// and returns the full response text.
-        /// </summary>
         public string SendMessageStream(string text, Action<string> onTextChunk)
         {
             if (onTextChunk == null) throw new ArgumentNullException(nameof(onTextChunk));
@@ -103,7 +85,6 @@ namespace LiteRT.LM
             return builder.ToString();
         }
 
-        /// <summary>Clones the conversation, including its history.</summary>
         public LlmConversation Clone()
         {
             var clone = LiteRtLmNative.litert_lm_conversation_clone(_conversation);
@@ -114,7 +95,6 @@ namespace LiteRT.LM
             return new LlmConversation(clone);
         }
 
-        /// <summary>Requests cancellation of an in-progress generation.</summary>
         public void Cancel() => LiteRtLmNative.litert_lm_conversation_cancel_process(_conversation);
 
         public void Dispose()

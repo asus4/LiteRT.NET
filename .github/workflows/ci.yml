@@ -23,8 +23,7 @@ jobs:
         with:
           path: litert-net
 
-      # The prebuilt binaries and the committed bindings must share the same C ABI, so
-      # default to the latest LiteRT-LM release tag instead of main (which can drift).
+      # Default to the latest release tag, not main — the C ABI must match the committed bindings.
       - name: Resolve LiteRT-LM ref
         id: litert-lm
         env:
@@ -39,7 +38,6 @@ jobs:
           echo "Using LiteRT-LM ref: $REF"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
 
-      # Needed by fetch-natives.sh for the prebuilt core / GPU / Gemma plugin.
       - name: Checkout LiteRT-LM
         uses: actions/checkout@v6
         with:
@@ -56,7 +54,7 @@ jobs:
         working-directory: litert-net
         run: |
           chmod +x scripts/fetch-natives.sh
-          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" scripts/fetch-natives.sh   # -> src/LiteRT|src/LiteRT.LM/runtimes/<rid>/native
+          LITERT_LM_DIR="$GITHUB_WORKSPACE/LiteRT-LM" scripts/fetch-natives.sh
 
       - name: Restore
         working-directory: litert-net

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace LiteRT.LM.Interop
 {
-    /// <summary>Sampler strategy (engine.h LiteRtLmSamplerType).</summary>
+    // engine.h LiteRtLmSamplerType
     public enum LiteRtLmSamplerType
     {
         Unspecified = 0,
@@ -12,7 +12,7 @@ namespace LiteRT.LM.Interop
         Greedy = 3,
     }
 
-    /// <summary>Type of a single input data element (engine.h LiteRtLmInputDataType).</summary>
+    // engine.h LiteRtLmInputDataType
     public enum LiteRtLmInputDataType
     {
         Text = 0,
@@ -22,7 +22,7 @@ namespace LiteRT.LM.Interop
         AudioEnd = 4,
     }
 
-    /// <summary>Sampler parameters (engine.h LiteRtLmSamplerParams).</summary>
+    // engine.h LiteRtLmSamplerParams
     [StructLayout(LayoutKind.Sequential)]
     public struct LiteRtLmSamplerParams
     {
@@ -33,7 +33,7 @@ namespace LiteRT.LM.Interop
         public int Seed;
     }
 
-    /// <summary>A single piece of input data (engine.h LiteRtLmInputData).</summary>
+    // engine.h LiteRtLmInputData
     [StructLayout(LayoutKind.Sequential)]
     public struct LiteRtLmInputData
     {
@@ -42,7 +42,7 @@ namespace LiteRT.LM.Interop
         public UIntPtr Size;
     }
 
-    /// <summary>Streaming callback (engine.h LiteRtLmStreamCallback).</summary>
+    // engine.h LiteRtLmStreamCallback
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void LiteRtLmStreamCallback(
         IntPtr callbackData,
@@ -50,14 +50,10 @@ namespace LiteRT.LM.Interop
         [MarshalAs(UnmanagedType.I1)] bool isFinal,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string? errorMsg);
 
-    /// <summary>
-    /// Raw P/Invoke declarations for the LiteRT-LM C API (LiteRT-LM/c/engine.h),
-    /// exported by the self-built <c>libLiteRtLmC</c> shared library.
-    /// </summary>
+    // LiteRT-LM C API (LiteRT-LM/c/engine.h), exported by the self-built libLiteRtLmC.
     internal static class LiteRtLmNative
     {
-        // Unity iOS builds statically link plugins into the player binary, so
-        // P/Invoke must target the executable itself rather than a shared library.
+        // iOS statically links plugins into the player binary, so P/Invoke must target "__Internal".
 #if __IOS__ || (UNITY_IOS && !UNITY_EDITOR)
         internal const string LibraryName = "__Internal";
 #else
@@ -67,7 +63,6 @@ namespace LiteRT.LM.Interop
         [DllImport(LibraryName)]
         internal static extern void litert_lm_set_min_log_level(int level);
 
-        // --- Engine settings ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_engine_settings_create(
             [MarshalAs(UnmanagedType.LPUTF8Str)] string model_path,
@@ -86,14 +81,12 @@ namespace LiteRT.LM.Interop
         internal static extern void litert_lm_engine_settings_set_activation_data_type(
             IntPtr settings, int activation_data_type_int);
 
-        // --- Engine ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_engine_create(IntPtr settings);
 
         [DllImport(LibraryName)]
         internal static extern void litert_lm_engine_delete(IntPtr engine);
 
-        // --- Session config ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_session_config_create();
 
@@ -108,7 +101,6 @@ namespace LiteRT.LM.Interop
         internal static extern void litert_lm_session_config_set_sampler_params(
             IntPtr config, in LiteRtLmSamplerParams sampler_params);
 
-        // --- Session ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_engine_create_session(IntPtr engine, IntPtr config);
 
@@ -138,7 +130,6 @@ namespace LiteRT.LM.Interop
         internal static extern int litert_lm_session_run_decode_async(
             IntPtr session, LiteRtLmStreamCallback callback, IntPtr callback_data);
 
-        // --- Responses ---
         [DllImport(LibraryName)]
         internal static extern void litert_lm_responses_delete(IntPtr responses);
 
@@ -155,7 +146,6 @@ namespace LiteRT.LM.Interop
         [DllImport(LibraryName)]
         internal static extern float litert_lm_responses_get_score_at(IntPtr responses, int index);
 
-        // --- Conversation config ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_conversation_config_create();
 
@@ -174,7 +164,6 @@ namespace LiteRT.LM.Interop
         internal static extern void litert_lm_conversation_config_set_messages(
             IntPtr config, [MarshalAs(UnmanagedType.LPUTF8Str)] string messages_json);
 
-        // --- Conversation optional args ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_conversation_optional_args_create();
 
@@ -185,7 +174,6 @@ namespace LiteRT.LM.Interop
         internal static extern void litert_lm_conversation_optional_args_set_max_output_tokens(
             IntPtr optional_args, int max_output_tokens);
 
-        // --- Conversation ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_conversation_create(IntPtr engine, IntPtr config);
 
@@ -213,14 +201,12 @@ namespace LiteRT.LM.Interop
             IntPtr optional_args,
             LiteRtLmStreamCallback callback, IntPtr callback_data);
 
-        // --- JSON response ---
         [DllImport(LibraryName)]
         internal static extern void litert_lm_json_response_delete(IntPtr response);
 
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_json_response_get_string(IntPtr response);
 
-        // --- Tokenizer ---
         [DllImport(LibraryName)]
         internal static extern IntPtr litert_lm_engine_tokenize(
             IntPtr engine, [MarshalAs(UnmanagedType.LPUTF8Str)] string text);

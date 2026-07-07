@@ -5,28 +5,18 @@ using LiteRT.Interop;
 
 namespace LiteRT
 {
-    /// <summary>
-    /// A LiteRT environment. Owns runtime/GPU context and must outlive any
-    /// <see cref="LiteRtCompiledModel"/> and <see cref="LiteRtTensorBuffer"/> created from it.
-    /// </summary>
+    /// <summary>Must outlive any <see cref="LiteRtCompiledModel"/> and <see cref="LiteRtTensorBuffer"/> created from it.</summary>
     public sealed class LiteRtEnvironment : IDisposable
     {
         private IntPtr _handle;
 
-        /// <param name="autoRegisterAccelerators">
-        /// Which hardware accelerators the environment auto-registers (and probes plugins for)
-        /// at creation. When <c>null</c> the runtime registers all supported accelerators,
-        /// which on a CPU-only install logs warnings for the missing GPU/NPU plugins. Pass
-        /// <see cref="LiteRtHwAccelerators.Cpu"/> for a quiet CPU-only environment, or include
-        /// <see cref="LiteRtHwAccelerators.Gpu"/> to enable the GPU accelerator (requires the
-        /// a LiteRT.Gpu.* package so the accelerator dylib sits beside the core library).
-        /// </param>
+        /// <param name="autoRegisterAccelerators">null registers all accelerators (logs warnings
+        /// for missing GPU/NPU plugins); pass Cpu for a quiet CPU-only environment.</param>
         public LiteRtEnvironment(LiteRtHwAccelerators? autoRegisterAccelerators = null)
         {
             var options = new List<LiteRtEnvOptionNative>();
 
-            // Tell the runtime where the accelerator plugins live so it can dlopen them by
-            // absolute path; otherwise it tries a bare filename the OS loader can't resolve.
+            // Accelerator plugins must be dlopen'd by absolute path; a bare filename fails.
             string? libraryDir = NativeRuntime.ResolveLibraryDirectory();
             IntPtr libraryDirPtr = IntPtr.Zero;
             try

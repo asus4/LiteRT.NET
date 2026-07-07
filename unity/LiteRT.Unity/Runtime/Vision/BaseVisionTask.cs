@@ -10,42 +10,35 @@ using UnityEngine.Assertions;
 
 namespace LiteRT.Unity
 {
-    /// <summary>
-    /// Base class for vision task that takes a Texture as an input
-    /// </summary>
     public abstract class BaseVisionTask : IDisposable
     {
-        protected LiteRtEnvironment environment;
-        protected LiteRtModelLoader modelLoader;
-        protected LiteRtCompiledModel compiledModel;
-        protected LiteRtSignature signature;
-        protected LiteRtTensorBuffer[] inputBuffers;
-        protected LiteRtTensorBuffer[] outputBuffers;
+        // Late-init: assigned by InitializeAsync; Run() guards on IsInitialized.
+        protected LiteRtEnvironment environment = null!;
+        protected LiteRtModelLoader modelLoader = null!;
+        protected LiteRtCompiledModel compiledModel = null!;
+        protected LiteRtSignature signature = null!;
+        protected LiteRtTensorBuffer[] inputBuffers = null!;
+        protected LiteRtTensorBuffer[] outputBuffers = null!;
         protected int inputTensorIndex = 0;
         protected int width;
         protected int height;
         protected int channels;
-        protected TextureToNativeTensor textureToTensor;
+        protected TextureToNativeTensor textureToTensor = null!;
 
         private bool isDisposed = false;
 
-        // Aspect scale applied to the last PreProcess input, used to map results back.
+        // Scale from the last PreProcess, used to map results back to texture space.
         private Vector2 aspectScale = Vector2.one;
 
         public AspectMode AspectMode { get; set; } = AspectMode.None;
 
-        /// <summary>Becomes true once <see cref="InitializeAsync"/> has finished.</summary>
         public bool IsInitialized { get; private set; }
 
         protected static readonly ProfilerMarker preprocessPerfMarker = new($"{typeof(BaseVisionTask).Name}.Preprocess");
         protected static readonly ProfilerMarker runPerfMarker = new($"{typeof(BaseVisionTask).Name}.Session.Run");
         protected static readonly ProfilerMarker postprocessPerfMarker = new($"{typeof(BaseVisionTask).Name}.Postprocess");
 
-        /// <summary>
-        /// Load and compile the model, then allocate all input/output tensor buffers.
-        /// </summary>
         /// <param name="modelPath">A model path: absolute, URL, or relative to StreamingAssets</param>
-        /// <param name="accelerator">Hardware accelerator flags used to compile the model</param>
         protected async ValueTask InitializeAsync(
             string modelPath,
             LiteRtHwAccelerators accelerator = LiteRtHwAccelerators.Cpu,
@@ -85,10 +78,6 @@ namespace LiteRT.Unity
             isDisposed = true;
         }
 
-        /// <summary>
-        /// Run the model with the input texture
-        /// </summary>
-        /// <param name="texture">A texture for model input</param>
         public virtual void Run(Texture texture)
         {
             if (isDisposed)
@@ -113,9 +102,6 @@ namespace LiteRT.Unity
             postprocessPerfMarker.End();
         }
 
-        /// <summary>
-        /// Pre process the input texture and set all input tensors for the model
-        /// </summary>
         protected virtual void PreProcess(Texture texture)
         {
             float srcAspect = (float)texture.width / texture.height;
@@ -129,19 +115,12 @@ namespace LiteRT.Unity
             inputBuffer.Write(input.AsReadOnlySpan());
         }
 
-        /// <summary>
-        /// Get the output tensors and do post process in subclass
-        /// </summary>
         protected abstract void PostProcess();
 
         /// <summary>
-        /// Converts a normalized Rect in the model input space to the source texture space,
-        /// undoing the AspectMode (letterbox/crop) scaling applied in PreProcess.
-        /// The mapping is symmetric around the center, so it is valid for both
-        /// top-left and bottom-left origins.
+        /// Maps a normalized Rect from model input space to source texture space, undoing the
+        /// AspectMode scaling. Center-symmetric, so valid for both top-left and bottom-left origins.
         /// </summary>
-        /// <param name="rect">A normalized Rect in the model input space</param>
-        /// <returns>A normalized Rect in the source texture space</returns>
         public Rect ConvertToTextureSpace(in Rect rect)
         {
             Vector2 scale = aspectScale;
@@ -152,10 +131,6 @@ namespace LiteRT.Unity
                 rect.height * scale.y);
         }
 
-        /// <summary>
-        /// Default implementation of InitializeInputsOutputs
-        /// Override this in subclass if needed
-        /// </summary>
         protected virtual void InitializeInputsOutputs(in LiteRtRankedTensorType inputType)
         {
             ReadOnlySpan<int> inputShape = inputType.Dimensions;
@@ -177,11 +152,6 @@ namespace LiteRT.Unity
             }
         }
 
-        /// <summary>
-        /// Create TextureToTensor for this model.
-        /// Override this in subclass if needed
-        /// </summary>
-        /// <returns>A TextureToNativeTensor instance</returns>
         protected virtual TextureToNativeTensor CreateTextureToTensor(in LiteRtRankedTensorType inputType)
         {
             return TextureToNativeTensor.Create(new()
@@ -195,18 +165,13 @@ namespace LiteRT.Unity
             });
         }
 
-        /// <summary>
-        /// Resolve a serialized model path: URLs and absolute paths pass through,
-        /// anything else is treated as relative to StreamingAssets.
-        /// </summary>
         protected static string ResolvePath(string path)
         {
             if (path.Contains("://") || Path.IsPathRooted(path))
             {
                 return path;
             }
-            // On Android this produces a jar:file:// URL which LiteRtModelLoader
-            // fetches via UnityWebRequest.
+            // On Android this yields a jar:file:// URL, fetched via UnityWebRequest.
             return Path.Combine(Application.streamingAssetsPath, path);
         }
 

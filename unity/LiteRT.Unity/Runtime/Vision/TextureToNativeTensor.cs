@@ -7,16 +7,13 @@ using UnityEngine.Rendering;
 
 namespace LiteRT.Unity
 {
-    /// <summary>
-    /// Converts Texture to Tensor with arbitrary matrix transformation
-    /// then return it as a NativeArray<byte> (NHWC layout)
-    /// </summary>
+    /// <summary>Converts a Texture to a tensor NativeArray&lt;byte&gt; (NHWC) with a matrix transform.</summary>
     public abstract class TextureToNativeTensor : IDisposable
     {
         [Serializable]
         public class Options
         {
-            public ComputeShader compute = null;
+            public ComputeShader? compute = null;
             public int kernel = 0;
             public int width = 0;
             public int height = 0;
@@ -56,14 +53,13 @@ namespace LiteRT.Unity
             bool isSupported = SystemInfo.supportsAsyncGPUReadback && SystemInfo.supportsComputeShaders;
             if (!isSupported)
             {
-                // Note: Async GPU Readback is supported on most platforms
-                //       including OpenGL ES 3.0 since Unity 2021 LTS
                 throw new NotSupportedException("AsyncGPUReadback and ComputeShader are required to use TextureToNativeTensor");
             }
 
+            // Unity's != handles destroyed (fake-null) objects; flow analysis can't see that, hence the !.
             hasCustomCompute = options.compute != null;
             compute = hasCustomCompute
-                ? options.compute
+                ? options.compute!
                 : CloneDefaultComputeShaderFloat32();
             kernel = options.kernel;
             width = options.width;
@@ -150,9 +146,6 @@ namespace LiteRT.Unity
             };
         }
 
-        /// <summary>
-        /// Find the appropriate TextureToNativeTensor class for the given input type
-        /// </summary>
         public static TextureToNativeTensor Create(Options options)
         {
             return options.inputType switch

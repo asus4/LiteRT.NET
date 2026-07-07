@@ -4,15 +4,8 @@ using UnityEngine;
 namespace LiteRT.LM.Unity
 {
     /// <summary>
-    /// Wires the LiteRT-LM natives shipped in this package into the managed runtime.
-    ///
-    /// <c>libLiteRtLmC</c> itself resolves through Unity's plugin importer (DllImport by
-    /// bare name), and its load-time dependency <c>libGemmaModelConstraintProvider</c>
-    /// resolves via the <c>@loader_path</c> rpath baked into the dylib. What still needs
-    /// wiring is <see cref="LiteRtRuntime.NativeLibraryDirectory"/>: the LM engine's GPU
-    /// path dlopens accelerator plugins from that directory. The core package's own
-    /// initializer usually sets it, but <c>RuntimeInitializeOnLoadMethod</c> ordering
-    /// across assemblies is undefined, so this initializer resolves it too (idempotent).
+    /// Sets <see cref="LiteRtRuntime.NativeLibraryDirectory"/> for the LM engine's GPU accelerator dlopen.
+    /// Duplicates the core initializer because RuntimeInitializeOnLoadMethod ordering across assemblies is undefined.
     /// </summary>
     public static class LiteRtLmNativeLibrary
     {
@@ -29,8 +22,7 @@ namespace LiteRT.LM.Unity
             }
 
 #if UNITY_EDITOR
-            // Sanity check: warn early if the LM natives were not synced into this package
-            // (scripts/sync-unity-natives.sh) instead of failing at the first P/Invoke.
+            // Warn early if the LM natives were not synced (scripts/sync-unity-natives.sh).
             var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
                 typeof(LiteRtLmNativeLibrary).Assembly);
             if (package != null)

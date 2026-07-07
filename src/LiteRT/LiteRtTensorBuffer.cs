@@ -4,10 +4,6 @@ using LiteRT.Interop;
 
 namespace LiteRT
 {
-    /// <summary>
-    /// A managed tensor buffer used to feed inputs to and read outputs from a
-    /// <see cref="LiteRtCompiledModel"/>.
-    /// </summary>
     public sealed unsafe class LiteRtTensorBuffer : IDisposable
     {
         private IntPtr _handle;
@@ -22,7 +18,6 @@ namespace LiteRT
 
         public LiteRtElementType ElementType { get; }
 
-        /// <summary>Size in packed bytes used when reading/writing the locked buffer.</summary>
         public int PackedByteSize
         {
             get
@@ -34,7 +29,6 @@ namespace LiteRT
             }
         }
 
-        /// <summary>Copies <paramref name="data"/> into the buffer.</summary>
         public void Write(ReadOnlySpan<byte> data)
         {
             LiteRtException.ThrowIfError(
@@ -56,7 +50,6 @@ namespace LiteRT
         public void Write(ReadOnlySpan<float> data) =>
             Write(MemoryMarshal.AsBytes(data));
 
-        /// <summary>Copies the buffer contents into <paramref name="destination"/>.</summary>
         public void Read(Span<byte> destination)
         {
             LiteRtException.ThrowIfError(

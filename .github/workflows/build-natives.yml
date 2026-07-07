@@ -44,8 +44,7 @@ jobs:
         with:
           path: litert-net
 
-      # The C ABI of libLiteRtLmC must match the committed bindings, so default to the
-      # latest LiteRT-LM release tag instead of main (which can drift).
+      # Default to the latest release tag, not main — the C ABI must match the committed bindings.
       - name: Resolve LiteRT-LM ref
         id: litert-lm
         env:
@@ -71,8 +70,7 @@ jobs:
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
 
-      # Pin the NDK rather than trusting the runner image: the artifact's 16 KB page
-      # alignment and libc++ come from the NDK, and upstream wants r28b+.
+      # Pin the NDK (r28b+): 16 KB page alignment and libc++ come from it.
       - name: Set up Android NDK
         if: startsWith(matrix.rid, 'android')
         id: ndk
@@ -83,8 +81,7 @@ jobs:
 
       - name: Build libLiteRtLmC
         run: |
-          # Only export for android targets: LiteRT-LM's WORKSPACE registers the NDK
-          # toolchain whenever ANDROID_NDK_HOME is set, and an empty value breaks it.
+          # Export only for android targets: an empty ANDROID_NDK_HOME breaks LiteRT-LM's WORKSPACE.
           if [[ "${{ matrix.target }}" == android_* ]]; then
             export ANDROID_NDK_HOME="${{ steps.ndk.outputs.ndk-path }}"
           fi

@@ -3,13 +3,10 @@ using LiteRT.Interop;
 
 namespace LiteRT
 {
-    /// <summary>
-    /// Element type and shape of a model tensor (managed mirror of the native
-    /// <c>LiteRtRankedTensorType</c> struct).
-    /// </summary>
+    /// <summary>Managed mirror of the native <c>LiteRtRankedTensorType</c>.</summary>
     public readonly struct LiteRtRankedTensorType
     {
-        /// <summary><c>LITERT_TENSOR_MAX_RANK</c> in the LiteRT C API.</summary>
+        /// <summary><c>LITERT_TENSOR_MAX_RANK</c>.</summary>
         public const int MaxRank = 8;
 
         private readonly int[] _dimensions;
@@ -18,12 +15,10 @@ namespace LiteRT
 
         public int Rank => _dimensions?.Length ?? 0;
 
-        /// <summary>Tensor dimensions; a dynamic dimension is reported as a negative value.</summary>
+        /// <summary>A dynamic dimension is reported as a negative value.</summary>
         public ReadOnlySpan<int> Dimensions => _dimensions;
 
-        /// <summary>
-        /// Product of all dimensions (1 for rank 0). Throws if any dimension is dynamic.
-        /// </summary>
+        /// <summary>Throws if any dimension is dynamic.</summary>
         public int ElementCount
         {
             get
@@ -59,11 +54,8 @@ namespace LiteRT
                 LiteRtNative.LiteRtGetRankedTensorType(tensor, blob),
                 nameof(LiteRtNative.LiteRtGetRankedTensorType));
 
-            // Leading fields of LiteRtRankedTensorType are layout-stable across compilers
-            // (only the trailing stride bitfield packing differs):
-            //   offset 0: int32  element_type
-            //   offset 4: uint32 layout.rank
-            //   offset 8: int32  layout.dimensions[LITERT_TENSOR_MAX_RANK]
+            // Leading fields are layout-stable across compilers (only trailing stride bitfields differ):
+            // offset 0 int32 element_type, offset 4 uint32 rank, offset 8 int32 dims[MaxRank].
             var elementType = (LiteRtElementType)(*(int*)blob);
             uint rank = *(uint*)(blob + 4);
             if (rank > MaxRank)
