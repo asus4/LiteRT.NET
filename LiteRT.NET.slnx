@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/examples/">
     <Project Path="examples/MinimalInference/MinimalInference.csproj" />
-    <Project Path="examples/SimpleLlm/SimpleLlm.csproj" />
+    <Project Path="examples/SimpleChat/SimpleChat.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/LiteRT.LM/LiteRT.LM.csproj" />
