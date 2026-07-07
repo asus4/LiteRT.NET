@@ -62,7 +62,7 @@ namespace LiteRT.Unity
             environment = new LiteRtEnvironment(LiteRtHwAccelerators.Cpu | accelerator);
             modelLoader = new LiteRtModelLoader();
             LiteRtModel model = await modelLoader.LoadFromPathAsync(ResolvePath(modelPath), cancellationToken);
-            compiledModel = new LiteRtCompiledModel(environment, model, accelerator);
+            compiledModel = new LiteRtCompiledModel(environment, model, LiteRtHwAccelerators.Cpu | accelerator);
             signature = model.GetSignature(0);
 
             LiteRtRankedTensorType inputType = signature.GetInputTensorType(inputTensorIndex);
