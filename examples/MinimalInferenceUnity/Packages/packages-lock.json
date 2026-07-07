@@ -11,7 +11,8 @@
       "depth": 0,
       "source": "local",
       "dependencies": {
-        "com.github.asus4.litert": "0.1.0-alpha"
+        "com.github.asus4.litert": "0.1.0-alpha",
+        "com.unity.burst": "1.8.12"
       }
     },
     "com.unity.2d.sprite": {
@@ -36,7 +37,7 @@
     },
     "com.unity.burst": {
       "version": "1.8.28",
-      "depth": 2,
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.mathematics": "1.2.1",

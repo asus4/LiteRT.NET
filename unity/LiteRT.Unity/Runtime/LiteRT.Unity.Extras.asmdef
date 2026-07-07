@@ -2,7 +2,8 @@
     "name": "LiteRT.Unity.Extras",
     "rootNamespace": "LiteRT.Unity",
     "references": [
-        "LiteRT.Managed"
+        "LiteRT.Managed",
+        "Unity.Burst"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

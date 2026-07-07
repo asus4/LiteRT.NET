@@ -8,9 +8,15 @@ string modelPath = args.Length > 0
     ? args[0]
     : Path.Combine(AppContext.BaseDirectory, "models", "sqrt_mean_mul_ops.tflite");
 
-// Second arg picks the accelerator: "cpu" (default) or "gpu".
+// Second arg picks the accelerator: "cpu" (default), "gpu", or "cpu+gpu"
+// (GPU with CPU fallback for unsupported ops).
 string acceleratorArg = args.Length > 1 ? args[1].ToLowerInvariant() : "cpu";
-var accelerator = acceleratorArg == "gpu" ? LiteRtHwAccelerators.Gpu : LiteRtHwAccelerators.Cpu;
+var accelerator = acceleratorArg switch
+{
+    "gpu" => LiteRtHwAccelerators.Gpu,
+    "cpu+gpu" or "gpu+cpu" => LiteRtHwAccelerators.Cpu | LiteRtHwAccelerators.Gpu,
+    _ => LiteRtHwAccelerators.Cpu,
+};
 
 if (!File.Exists(modelPath))
 {
@@ -38,17 +44,19 @@ try
         var buffer = compiled.CreateInputBuffer(signature, i);
         inputs.Add(buffer);
         int count = buffer.PackedByteSize / sizeof(float);
-        Console.WriteLine($"  input '{signature.GetInputName(i)}': {buffer.ElementType}, {count} float element(s)");
+        Console.WriteLine($"  input '{signature.GetInputName(i)}': {signature.GetInputTensorType(i)}, {count} float element(s)");
 
-        // Fill with a simple ramp so the output is deterministic.
+        // Fill with a deterministic pattern. Values stay in a small range so
+        // fp16-based accelerators (e.g. Metal) don't overflow on image models.
         var data = new float[count];
-        for (int j = 0; j < count; j++) data[j] = j + 1;
+        for (int j = 0; j < count; j++) data[j] = (j % 256) / 255f;
         buffer.Write(data);
     }
 
     for (int i = 0; i < signature.OutputCount; i++)
     {
         outputs.Add(compiled.CreateOutputBuffer(signature, i));
+        Console.WriteLine($"  output '{signature.GetOutputName(i)}': {signature.GetOutputTensorType(i)}");
     }
 
     compiled.Run(signature, inputs, outputs);

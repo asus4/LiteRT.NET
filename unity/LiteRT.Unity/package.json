@@ -15,6 +15,7 @@
     "name": "Koki Ibukuro"
   },
   "dependencies": {
-    "com.github.asus4.litert": "0.1.0-alpha"
+    "com.github.asus4.litert": "0.1.0-alpha",
+    "com.unity.burst": "1.8.12"
   }
 }

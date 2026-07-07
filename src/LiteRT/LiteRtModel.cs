@@ -167,6 +167,14 @@ namespace LiteRT
             return Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
         }
 
+        /// <summary>Element type and shape of the signature input at <paramref name="index"/>.</summary>
+        public LiteRtRankedTensorType GetInputTensorType(int index) =>
+            LiteRtRankedTensorType.FromTensor(GetInputTensor(index));
+
+        /// <summary>Element type and shape of the signature output at <paramref name="index"/>.</summary>
+        public LiteRtRankedTensorType GetOutputTensorType(int index) =>
+            LiteRtRankedTensorType.FromTensor(GetOutputTensor(index));
+
         internal IntPtr GetInputTensor(int index)
         {
             LiteRtException.ThrowIfError(
