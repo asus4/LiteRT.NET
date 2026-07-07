@@ -1,9 +1,9 @@
 name: release-unity
 
-# Packs and signs the Unity UPM packages (unity/LiteRT and unity/LiteRT.Unity) and
-# attaches the .tgz archives to a GitHub Release. OpenUPM consumes the release assets
-# (trackingMode: githubRelease), so the native binaries only need to exist in the
-# package folder at `upm pack` time — they stay .gitignore'd in the repo.
+# Packs and signs the Unity UPM packages (unity/LiteRT, unity/LiteRT.Unity and
+# unity/LiteRT.LM) and attaches the .tgz archives to a GitHub Release. OpenUPM consumes
+# the release assets (trackingMode: githubRelease), so the native binaries only need to
+# exist in the package folder at `upm pack` time — they stay .gitignore'd in the repo.
 #
 # Trigger: push a tag like `v0.1.0` (must match both package.json versions), or run
 # manually via workflow_dispatch to test packing/signing — the dispatch path uploads
@@ -56,10 +56,14 @@ jobs:
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           CORE_VERSION="$(jq -r .version unity/LiteRT/package.json)"
           UTILS_VERSION="$(jq -r .version unity/LiteRT.Unity/package.json)"
+          LM_VERSION="$(jq -r .version unity/LiteRT.LM/package.json)"
           CORE_DEP="$(jq -r '.dependencies["com.github.asus4.litert"]' unity/LiteRT.Unity/package.json)"
-          echo "tag=$TAG_VERSION core=$CORE_VERSION utils=$UTILS_VERSION dep=$CORE_DEP"
-          if [ "$CORE_VERSION" != "$TAG_VERSION" ] || [ "$UTILS_VERSION" != "$TAG_VERSION" ] || [ "$CORE_DEP" != "$TAG_VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json versions (core=$CORE_VERSION, utils=$UTILS_VERSION, dep=$CORE_DEP)"
+          LM_CORE_DEP="$(jq -r '.dependencies["com.github.asus4.litert"]' unity/LiteRT.LM/package.json)"
+          echo "tag=$TAG_VERSION core=$CORE_VERSION utils=$UTILS_VERSION lm=$LM_VERSION dep=$CORE_DEP lm-dep=$LM_CORE_DEP"
+          if [ "$CORE_VERSION" != "$TAG_VERSION" ] || [ "$UTILS_VERSION" != "$TAG_VERSION" ] \
+            || [ "$LM_VERSION" != "$TAG_VERSION" ] || [ "$CORE_DEP" != "$TAG_VERSION" ] \
+            || [ "$LM_CORE_DEP" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json versions (core=$CORE_VERSION, utils=$UTILS_VERSION, lm=$LM_VERSION, dep=$CORE_DEP, lm-dep=$LM_CORE_DEP)"
             exit 1
           fi
 
@@ -89,6 +93,22 @@ jobs:
           path: litert-lm
           lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
+      # libLiteRtLmC is not prebuilt upstream; pull the most recent successful
+      # build-natives artifact so the LM package ships its natives.
+      # TODO: promote build-natives outputs to a GitHub Release for a pinned source.
+      - name: Fetch libLiteRtLmC from the latest build-natives run
+        working-directory: litert-net
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="$(gh run list --workflow build-natives --status success --limit 1 --json databaseId -q '.[0].databaseId')"
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No successful build-natives run found; run that workflow first to produce libLiteRtLmC artifacts."
+            exit 1
+          fi
+          gh run download "$RUN_ID" -n libLiteRtLmC-osx-arm64 -D out
+          ls -la out
+
       - name: Populate native libraries
         working-directory: litert-net
         env:
@@ -96,19 +116,20 @@ jobs:
         run: |
           chmod +x scripts/*.sh
           scripts/fetch-natives.sh            # -> src/LiteRT/runtimes/<rid>/native (+ src/LiteRT.LM, GPU pkgs)
-          scripts/sync-unity-natives.sh       # -> unity/LiteRT/Plugins/<platform>
-          scripts/sync-unity-bindings.sh      # -> unity/LiteRT/Runtime/Bindings
+          scripts/sync-unity-natives.sh       # -> unity/<package>/Plugins/<platform>
+          scripts/sync-unity-bindings.sh      # -> unity/<package>/Runtime/Bindings
 
       - name: Verify the bindings synced clean (no drift)
         working-directory: litert-net
-        run: git diff --exit-code unity/LiteRT/Runtime/Bindings
+        run: git diff --exit-code unity/LiteRT/Runtime/Bindings unity/LiteRT.LM/Runtime/Bindings
 
       # Guard against Git LFS pointer files sneaking into the package as "binaries".
       - name: Verify plugins are real binaries (not LFS pointers)
         working-directory: litert-net
         run: |
           file unity/LiteRT/Plugins/macOS/libLiteRt.dylib | grep Mach-O
-          find unity/LiteRT/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
+          file unity/LiteRT.LM/Plugins/macOS/libLiteRtLmC.dylib | grep Mach-O
+          find unity/LiteRT/Plugins unity/LiteRT.LM/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
             echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
 
       - name: Install Unity UPM CLI
@@ -123,6 +144,7 @@ jobs:
           mkdir -p "$DIST_DIR"
           upm pack ./unity/LiteRT       --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
           upm pack ./unity/LiteRT.Unity --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
+          upm pack ./unity/LiteRT.LM    --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
 
       - name: Verify packed archives are signed
         run: |

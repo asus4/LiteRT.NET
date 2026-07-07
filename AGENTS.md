@@ -13,7 +13,7 @@ LITERT_RIDS=osx-arm64 scripts/fetch-natives.sh    # just the host RID
 ```
 
 `libLiteRtLmC` (the LiteRT-LM C API) isn't prebuilt upstream; build it once for the host
-before the SimpleLlm example, then re-run `fetch-natives.sh` to collect it:
+before the SimpleChat example, then re-run `fetch-natives.sh` to collect it:
 
 ```sh
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
@@ -35,7 +35,7 @@ dotnet build -c Release src/LiteRT/LiteRT.csproj
 dotnet run --project examples/MinimalInference
 
 dotnet build -c Release src/LiteRT.LM/LiteRT.LM.csproj
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
+dotnet run --project examples/SimpleChat -- /path/to/model.litertlm "Hello" cpu
 ```
 
 Unity: open `examples/MinimalInferenceUnity` and run.
@@ -48,7 +48,7 @@ src/LiteRT.LM/          LiteRT-LM managed bindings + LM native runtime (LiteRT.L
 src/LiteRT.Gpu.*/       Optional GPU accelerator packages (Metal / WebGpu / OpenCl)
 unity/LiteRT/           Unity core UPM package: bindings (Runtime/Bindings) + natives (Plugins)
 unity/LiteRT.Unity/     Unity utilities UPM package (LiteRtModelLoader)
-examples/               Runnable samples (MinimalInference, SimpleLlm, MinimalInferenceUnity)
+examples/               Runnable samples (MinimalInference, SimpleChat, MinimalInferenceUnity)
 scripts/                Build/dev automation (fetch-natives, sync-unity-*, make-ios-xcframework)
 .github/workflows/      CI (managed) and native build matrix
 ```

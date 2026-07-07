@@ -1,0 +1,23 @@
+{
+  "name": "com.github.asus4.litert.lm",
+  "version": "0.1.0-alpha",
+  "displayName": "LiteRT-LM",
+  "description": "C#/.NET bindings for LiteRT-LM: on-device LLM inference (LlmEngine / LlmSession / LlmConversation)",
+  "unity": "2022.3",
+  "documentationUrl": "https://github.com/asus4/LiteRT.NET",
+  "changelogUrl": "https://github.com/asus4/LiteRT.NET/blob/main/unity/LiteRT.LM/CHANGELOG.md",
+  "licensesUrl": "https://github.com/asus4/LiteRT.NET/blob/main/LICENSE",
+  "keywords": [
+    "ai",
+    "litert",
+    "llm",
+    "genai",
+    "machine-learning"
+  ],
+  "author": {
+    "name": "Koki Ibukuro"
+  },
+  "dependencies": {
+    "com.github.asus4.litert": "0.1.0-alpha"
+  }
+}

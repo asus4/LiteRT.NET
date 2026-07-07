@@ -28,5 +28,5 @@ Simple LLM
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
 LITERT_RIDS=osx-arm64 scripts/fetch-natives.sh
 
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
+dotnet run --project examples/SimpleChat -- /path/to/model.litertlm "Hello" cpu
 ```

@@ -26,15 +26,15 @@ so the accelerator dylib sits beside the core library. `LiteRtEnvironment` sets 
 requested accelerators (a CPU-only run stays quiet instead of warning about absent
 GPU/NPU plugins).
 
-## SimpleLlm (LiteRT-LM — requires libLiteRtLmC)
+## SimpleChat (LiteRT-LM — requires libLiteRtLmC)
 
 ```bash
 # Initial setup:
 scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
 scripts/fetch-natives.sh
 
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
-dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
+dotnet run --project examples/SimpleChat -- /path/to/model.litertlm "Hello" cpu
+dotnet run --project examples/SimpleChat -- /path/to/model.litertlm "Hello" gpu
 ```
 
 For GPU decode this example references `LiteRT.Gpu.WebGpu`: the Metal accelerator

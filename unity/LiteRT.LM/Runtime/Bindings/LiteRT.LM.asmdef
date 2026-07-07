@@ -1,0 +1,16 @@
+{
+    "name": "LiteRT.LM",
+    "rootNamespace": "LiteRT.LM",
+    "references": [
+        "LiteRT.Managed"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

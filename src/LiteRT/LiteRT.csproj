@@ -8,9 +8,10 @@
     <IsAotCompatible Condition="'$(TargetFramework)' == 'net10.0'">true</IsAotCompatible>
   </PropertyGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="LiteRT.LM" />
-  </ItemGroup>
+  <!-- InternalsVisibleTo lives in AssemblyInfo.cs so it survives the Unity source sync. -->
+  <PropertyGroup>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
 
   <ItemGroup>
     <None Include="../../build/NativeConsumer.targets" Pack="true" PackagePath="build/$(PackageId).targets" Visible="false" />
