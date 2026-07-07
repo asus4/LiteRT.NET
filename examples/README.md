@@ -46,7 +46,7 @@ sampler today — see `classify()` in `scripts/fetch-natives.sh` for why.
 
 Unity 6 (`6000.3.11f1`) port of MinimalInference at `examples/MinimalInferenceUnity`.
 Consumes the two Unity UPM packages by local `file:` reference (`Packages/manifest.json`):
-`com.github.asus4.litert` (`unity/LiteRT`) and `com.github.asus4.litert.unity`
+`com.koki-ibukuro.litert` (`unity/LiteRT`) and `com.koki-ibukuro.litert.unity`
 (`unity/LiteRT.Unity`). **No NuGetForUnity** — the packages are self-contained.
 Verified end-to-end on the macOS Editor (Apple Silicon, CPU).
 
@@ -89,7 +89,7 @@ absolute path. Harmless for CPU; required for GPU.
 
 ### Model loading
 
-`LiteRtModelLoader` (in `com.github.asus4.litert.unity`) handles loading. The sample
+`LiteRtModelLoader` (in `com.koki-ibukuro.litert.unity`) handles loading. The sample
 MonoBehaviour (`Assets/Scripts/MinimalInferenceBehaviour.cs`) reads the model from
 `StreamingAssets` with `UnityWebRequest` (modern `async Awaitable` + `await
 SendWebRequest()`). This is cross-platform: Android's `StreamingAssets` lives inside the APK

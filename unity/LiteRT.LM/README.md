@@ -2,7 +2,7 @@
 
 C# bindings for [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) — on-device LLM inference with `.litertlm` models (Gemma, Llama, Phi, Qwen, ...).
 
-Part of [LiteRT.NET](https://github.com/asus4/LiteRT.NET). Depends on the core `com.github.asus4.litert` package.
+Part of [LiteRT.NET](https://github.com/asus4/LiteRT.NET). Depends on the core `com.koki-ibukuro.litert` package.
 
 ## Status
 

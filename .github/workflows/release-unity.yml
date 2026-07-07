@@ -57,8 +57,8 @@ jobs:
           CORE_VERSION="$(jq -r .version unity/LiteRT/package.json)"
           UTILS_VERSION="$(jq -r .version unity/LiteRT.Unity/package.json)"
           LM_VERSION="$(jq -r .version unity/LiteRT.LM/package.json)"
-          CORE_DEP="$(jq -r '.dependencies["com.github.asus4.litert"]' unity/LiteRT.Unity/package.json)"
-          LM_CORE_DEP="$(jq -r '.dependencies["com.github.asus4.litert"]' unity/LiteRT.LM/package.json)"
+          CORE_DEP="$(jq -r '.dependencies["com.koki-ibukuro.litert"]' unity/LiteRT.Unity/package.json)"
+          LM_CORE_DEP="$(jq -r '.dependencies["com.koki-ibukuro.litert"]' unity/LiteRT.LM/package.json)"
           echo "tag=$TAG_VERSION core=$CORE_VERSION utils=$UTILS_VERSION lm=$LM_VERSION dep=$CORE_DEP lm-dep=$LM_CORE_DEP"
           if [ "$CORE_VERSION" != "$TAG_VERSION" ] || [ "$UTILS_VERSION" != "$TAG_VERSION" ] \
             || [ "$LM_VERSION" != "$TAG_VERSION" ] || [ "$CORE_DEP" != "$TAG_VERSION" ] \

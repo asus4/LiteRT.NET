@@ -1,7 +1,8 @@
 # Publishing the Unity packages to OpenUPM
 
-The two UPM packages (`unity/LiteRT` → `com.github.asus4.litert`, `unity/LiteRT.Unity` →
-`com.github.asus4.litert.unity`) are published as **signed** packages: the
+The three UPM packages (`unity/LiteRT` → `com.koki-ibukuro.litert`, `unity/LiteRT.Unity` →
+`com.koki-ibukuro.litert.unity`, `unity/LiteRT.LM` → `com.koki-ibukuro.litert.lm`) are
+published as **signed** packages: the
 [release-unity workflow](../.github/workflows/release-unity.yml) packs and signs them with the
 Unity UPM CLI and attaches the `.tgz` archives to a GitHub Release. OpenUPM then consumes the
 release assets directly (`trackingMode: githubRelease`), so the gitignored native binaries never
@@ -35,31 +36,41 @@ Add these three secrets under *Settings → Secrets and variables → Actions*:
 
 ### 3. OpenUPM submission (after the first tagged release exists)
 
-Submit **both** packages at <https://openupm.com/packages/add/>. In each package's metadata
+Submit **all three** packages at <https://openupm.com/packages/add/>. In each package's metadata
 (`data/packages/<name>.yml` in the [openupm/openupm](https://github.com/openupm/openupm) repo),
 set the GitHub-release tracking mode and the asset-name prefix that identifies each package's
-`.tgz` in a release that carries both:
+`.tgz` in a release that carries all of them:
 
 ```yaml
-# com.github.asus4.litert.yml
+# com.koki-ibukuro.litert.yml
 trackingMode: githubRelease
-githubReleaseAssetName: 'com.github.asus4.litert-'
+githubReleaseAssetName: 'com.koki-ibukuro.litert-'
 ```
 
 ```yaml
-# com.github.asus4.litert.unity.yml
+# com.koki-ibukuro.litert.unity.yml
 trackingMode: githubRelease
-githubReleaseAssetName: 'com.github.asus4.litert.unity-'
+githubReleaseAssetName: 'com.koki-ibukuro.litert.unity-'
+```
+
+```yaml
+# com.koki-ibukuro.litert.lm.yml
+trackingMode: githubRelease
+githubReleaseAssetName: 'com.koki-ibukuro.litert.lm-'
 ```
 
 The prefix must exclude the version number; the trailing `-` keeps the core package's prefix from
-matching the utilities package's archives.
+matching the other two packages' archives.
+
+> Package names must not use well-known scopes like `com.github`
+> ([criteria](https://openupm.com/docs/adding-upm-package.html#upm-package-criteria)) — these
+> packages use the `com.koki-ibukuro` scope (reverse domain of <https://koki-ibukuro.com/>).
 
 ## Releasing a new version
 
-1. Bump `version` in `unity/LiteRT/package.json` **and** `unity/LiteRT.Unity/package.json`, and
-   the `com.github.asus4.litert` dependency version inside `unity/LiteRT.Unity/package.json` —
-   all three must match. Update both `CHANGELOG.md` files.
+1. Bump `version` in all three `unity/*/package.json` files, and the `com.koki-ibukuro.litert`
+   dependency version inside `unity/LiteRT.Unity/package.json` and `unity/LiteRT.LM/package.json`
+   — all must match (the release workflow enforces this). Update the `CHANGELOG.md` files.
 2. Merge to `main`, then tag and push:
 
    ```sh

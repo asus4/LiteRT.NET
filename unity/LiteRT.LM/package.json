@@ -1,5 +1,5 @@
 {
-  "name": "com.github.asus4.litert.lm",
+  "name": "com.koki-ibukuro.litert.lm",
   "version": "0.1.0-alpha",
   "displayName": "LiteRT-LM",
   "description": "C#/.NET bindings for LiteRT-LM: on-device LLM inference (LlmEngine / LlmSession / LlmConversation)",
@@ -18,6 +18,6 @@
     "name": "Koki Ibukuro"
   },
   "dependencies": {
-    "com.github.asus4.litert": "0.1.0-alpha"
+    "com.koki-ibukuro.litert": "0.1.0-alpha"
   }
 }

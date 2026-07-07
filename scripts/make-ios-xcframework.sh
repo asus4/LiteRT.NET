@@ -19,7 +19,7 @@ PREBUILT_DIR="${1:-$REPO_ROOT/../LiteRT-LM/prebuilt}"
 OUT_DIR="${2:-$REPO_ROOT/src/LiteRT/runtimes/ios/native}"
 
 FRAMEWORK_NAME="LiteRt"
-BUNDLE_ID="com.github.asus4.litert.LiteRt"
+BUNDLE_ID="com.koki-ibukuro.litert.LiteRt"
 MIN_OS="14.0"
 
 WORK="$(mktemp -d)"

@@ -1,5 +1,5 @@
 {
-  "name": "com.github.asus4.litert.unity",
+  "name": "com.koki-ibukuro.litert.unity",
   "version": "0.1.0-alpha",
   "displayName": "LiteRT Unity Utilities",
   "description": "Optional Unity helpers for LiteRT",
@@ -18,7 +18,7 @@
     "name": "Koki Ibukuro"
   },
   "dependencies": {
-    "com.github.asus4.litert": "0.1.0-alpha",
+    "com.koki-ibukuro.litert": "0.1.0-alpha",
     "com.unity.burst": "1.8.12"
   }
 }
