@@ -66,7 +66,6 @@ the LiteRT-LM docs. `LlmMessage` has helpers for building/parsing the JSON.
 - `Android/arm64-v8a/`, `Android/x86_64/`: `libLiteRtLmC.so` +
   `libGemmaModelConstraintProvider.so`, 16 KB-page aligned. Requires IL2CPP + ARM64
   target architectures and minSdk 24.
-- `iOS/`: `LiteRtLmC.xcframework.zip` + `GemmaModelConstraintProvider.xcframework.zip`
-  (device + simulator arm64, min iOS 15). An editor post-build step unzips, links
-  them into UnityFramework, and embeds them in the app — symbols resolve via
-  `[DllImport("__Internal")]`.
+- `iOS/`: `LiteRtLmC.xcframework` + `GemmaModelConstraintProvider.xcframework`
+  (device + simulator arm64, min iOS 15), imported by Unity as embedded dynamic
+  frameworks — symbols resolve via `[DllImport("__Internal")]`.

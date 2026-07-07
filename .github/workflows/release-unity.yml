@@ -134,9 +134,10 @@ jobs:
           file unity/LiteRT.LM/Plugins/macOS/libLiteRtLmC.dylib | grep Mach-O
           file unity/LiteRT.LM/Plugins/Android/arm64-v8a/libLiteRtLmC.so | grep ELF
           file unity/LiteRT.LM/Plugins/Android/x86_64/libLiteRtLmC.so | grep ELF
-          unzip -l unity/LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework.zip | grep -q ios-arm64/
-          unzip -l unity/LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework.zip | grep -q ios-arm64/
-          find unity/LiteRT/Plugins unity/LiteRT.LM/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
+          file unity/LiteRT/Plugins/iOS/LiteRt.xcframework/ios-arm64/LiteRt.framework/LiteRt | grep Mach-O
+          file unity/LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework/ios-arm64/LiteRtLmC.framework/LiteRtLmC | grep Mach-O
+          file unity/LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework/ios-arm64/GemmaModelConstraintProvider.framework/GemmaModelConstraintProvider | grep Mach-O
+          find unity/LiteRT/Plugins unity/LiteRT.LM/Plugins -type f ! -name '*.meta' ! -name 'Info.plist' -size -1k | grep . && {
             echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
 
       - name: Install Unity UPM CLI

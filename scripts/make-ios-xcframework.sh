@@ -6,8 +6,9 @@
 # Microsoft.ML.OnnxRuntime) we ship a zipped `.xcframework`. The binary is renamed `LiteRt`
 # with install name `@rpath/LiteRt.framework/LiteRt`; iOS resolves symbols via
 # `[DllImport("__Internal")]` against the linked+embedded framework (see LiteRtNative.cs).
-# Consumed by Unity (sync-unity-natives.sh -> Plugins/iOS/, embedded by LiteRtPostprocessBuild)
-# and, eventually, .NET-for-iOS / MAUI (NativeReference).
+# Consumed by Unity (sync-unity-natives.sh unzips into Plugins/iOS/<Name>.xcframework,
+# imported as a plugin with AddToEmbeddedBinaries) and, eventually, .NET-for-iOS / MAUI
+# (NativeReference).
 #
 # Usage: make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR]
 #   PREBUILT_DIR default ../LiteRT-LM/prebuilt (expects ios_arm64/, ios_sim_arm64/)

@@ -5,19 +5,9 @@ C# / .NET and Unity bindings for [LiteRT](https://github.com/google-ai-edge/Lite
 
 ## Reproduce
 
-Native binaries are generated, not committed — populate them before building:
-
-```sh
-scripts/fetch-natives.sh                          # all RIDs (best-effort)
-LITERT_RIDS=osx-arm64 scripts/fetch-natives.sh    # just the host RID
-```
-
-`libLiteRtLmC` (the LiteRT-LM C API) isn't prebuilt upstream; build it once for the host
-before the SimpleChat example, then re-run `fetch-natives.sh` to collect it:
-
-```sh
-scripts/litert-lm-c/build.sh /path/to/LiteRT-LM ./out
-```
+Native binaries are generated, not committed — populate them first: run
+`scripts/fetch-natives.sh` (and `scripts/litert-lm-c/build.sh` for the LiteRT-LM C API,
+which isn't prebuilt upstream). See [README.md](README.md) for the exact commands.
 
 For Unity, also sync the bindings + natives into the UPM package:
 

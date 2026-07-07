@@ -1,8 +1,6 @@
 name: build-natives
 
-# Builds libLiteRtLmC (the LiteRT-LM C API shared library) for each platform and
-# uploads the result as a workflow artifact for manual download. Once the build is
-# stable we can promote these to a GitHub Release for automatic consumption.
+# Builds libLiteRtLmC (the LiteRT-LM C API shared library) for each platform
 
 on:
   workflow_dispatch:
@@ -24,8 +22,6 @@ jobs:
             rid: linux-x64
             target: host
             outdir: out
-          # macos-15 for Xcode 16: the cxx Rust crate (LiteRT-LM dep) fails to compile
-          # against Xcode 15.4's libc++ on macos-14.
           - os: macos-15
             rid: osx-arm64
             target: host
@@ -38,8 +34,6 @@ jobs:
             rid: android-x64
             target: android_x86_64
             outdir: out/android-x64
-          # iOS emits both LiteRtLmC + GemmaModelConstraintProvider xcframework zips
-          # (device + simulator arm64) in one job.
           - os: macos-15
             rid: ios
             target: ios

@@ -4,7 +4,9 @@
 # there are committed (stable GUIDs + platform settings); only the .gitignore'd binaries are
 # copied. Run `scripts/fetch-natives.sh` first to populate the source runtimes; the LM C library
 # additionally needs `scripts/litert-lm-c/build.sh`. CI runs these before `upm pack`. iOS core
-# ships as LiteRt.xcframework.zip (embedded by LiteRtPostprocessBuild).
+# iOS payloads are unzipped from the runtimes/ xcframework.zips (the NuGet payload) into
+# Plugins/iOS/<Name>.xcframework — Unity imports the bundle as a plugin and links/embeds
+# it via the committed .meta (iOS enabled + AddToEmbeddedBinaries).
 #
 # GPU accelerators: only one plugin per platform is shipped — the core probes a hardcoded,
 # ordered basename list and registers the first hit (see docs/gpu-accelerator-probe-order.md).
@@ -23,7 +25,7 @@ MAP=(
     "LiteRT/runtimes/linux-x64/native/libLiteRt.so|LiteRT/Plugins/Linux/x86_64/libLiteRt.so"
     "LiteRT/runtimes/android-arm64/native/libLiteRt.so|LiteRT/Plugins/Android/arm64-v8a/libLiteRt.so"
     "LiteRT/runtimes/android-x64/native/libLiteRt.so|LiteRT/Plugins/Android/x86_64/libLiteRt.so"
-    "LiteRT/runtimes/ios/native/LiteRt.xcframework.zip|LiteRT/Plugins/iOS/LiteRt.xcframework.zip"
+    "LiteRT/runtimes/ios/native/LiteRt.xcframework.zip|LiteRT/Plugins/iOS/LiteRt.xcframework"
     "LiteRT.Gpu.Metal/runtimes/osx-arm64/native/libLiteRtMetalAccelerator.dylib|LiteRT/Plugins/macOS/libLiteRtMetalAccelerator.dylib"
     "LiteRT.Gpu.OpenCl/runtimes/android-arm64/native/libLiteRtGpuAccelerator.so|LiteRT/Plugins/Android/arm64-v8a/libLiteRtGpuAccelerator.so"
     "LiteRT.Gpu.OpenCl/runtimes/android-x64/native/libLiteRtGpuAccelerator.so|LiteRT/Plugins/Android/x86_64/libLiteRtGpuAccelerator.so"
@@ -33,8 +35,8 @@ MAP=(
     "LiteRT.LM/runtimes/android-arm64/native/libGemmaModelConstraintProvider.so|LiteRT.LM/Plugins/Android/arm64-v8a/libGemmaModelConstraintProvider.so"
     "LiteRT.LM/runtimes/android-x64/native/libLiteRtLmC.so|LiteRT.LM/Plugins/Android/x86_64/libLiteRtLmC.so"
     "LiteRT.LM/runtimes/android-x64/native/libGemmaModelConstraintProvider.so|LiteRT.LM/Plugins/Android/x86_64/libGemmaModelConstraintProvider.so"
-    "LiteRT.LM/runtimes/ios/native/LiteRtLmC.xcframework.zip|LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework.zip"
-    "LiteRT.LM/runtimes/ios/native/GemmaModelConstraintProvider.xcframework.zip|LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework.zip"
+    "LiteRT.LM/runtimes/ios/native/LiteRtLmC.xcframework.zip|LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework"
+    "LiteRT.LM/runtimes/ios/native/GemmaModelConstraintProvider.xcframework.zip|LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework"
 )
 
 echo "Syncing natives -> $DST"
@@ -44,7 +46,18 @@ for entry in "${MAP[@]}"; do
     dst="$DST/${entry##*|}"
     if [ -f "$src" ]; then
         mkdir -p "$(dirname "$dst")"
-        cp -f "$src" "$dst"
+        case "$dst" in
+            *.xcframework)
+                # NuGet ships the zip; Unity imports the unzipped .xcframework directly
+                # as a plugin (iOS enabled + AddToEmbeddedBinaries in the committed .meta).
+                rm -rf "$dst"
+                unzip -q "$src" -d "$(dirname "$dst")"
+                [ -d "$dst" ] || { echo "ERROR: $src did not contain $(basename "$dst") at its root" >&2; exit 1; }
+                ;;
+            *)
+                cp -f "$src" "$dst"
+                ;;
+        esac
         echo "  + ${entry##*|}"
         copied=$((copied + 1))
     else
