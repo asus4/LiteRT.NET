@@ -5,9 +5,9 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/LiteRT.LM/LiteRT.LM.csproj" />
-    <Project Path="src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj" />
-    <Project Path="src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj" />
-    <Project Path="src/LiteRT.Gpu.OpenCl.Native/LiteRT.Gpu.OpenCl.Native.csproj" />
+    <Project Path="src/LiteRT.Gpu.Metal/LiteRT.Gpu.Metal.csproj" />
+    <Project Path="src/LiteRT.Gpu.WebGpu/LiteRT.Gpu.WebGpu.csproj" />
+    <Project Path="src/LiteRT.Gpu.OpenCl/LiteRT.Gpu.OpenCl.csproj" />
     <Project Path="src/LiteRT/LiteRT.csproj" />
   </Folder>
 </Solution>

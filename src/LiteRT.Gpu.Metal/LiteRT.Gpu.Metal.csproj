@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>LiteRT.Gpu.WebGpu.Native</PackageId>
-    <Description>Optional WebGPU GPU accelerator for LiteRT.</Description>
+    <PackageId>LiteRT.Gpu.Metal</PackageId>
+    <Description>Optional Metal GPU accelerator for LiteRT (macOS / iOS).</Description>
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>

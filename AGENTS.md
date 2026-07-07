@@ -45,7 +45,7 @@ Unity: open `examples/MinimalInferenceUnity` and run.
 ```
 src/LiteRT/             Core managed bindings + core native runtime (LiteRT; runtimes/<rid>/native)
 src/LiteRT.LM/          LiteRT-LM managed bindings + LM native runtime (LiteRT.LM; runtimes/<rid>/native)
-src/LiteRT.Gpu.*.Native/  Optional GPU accelerator packages (Metal / WebGpu / OpenCl)
+src/LiteRT.Gpu.*/       Optional GPU accelerator packages (Metal / WebGpu / OpenCl)
 unity/LiteRT/           Unity core UPM package: bindings (Runtime/Bindings) + natives (Plugins)
 unity/LiteRT.Unity/     Unity utilities UPM package (LiteRtModelLoader)
 examples/               Runnable samples (MinimalInference, SimpleLlm, MinimalInferenceUnity)

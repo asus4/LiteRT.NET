@@ -5,30 +5,31 @@ name: release-unity
 # (trackingMode: githubRelease), so the native binaries only need to exist in the
 # package folder at `upm pack` time — they stay .gitignore'd in the repo.
 #
-# Trigger: push a tag like `unity-v0.1.0-alpha`.
+# Trigger: push a tag like `v0.1.0` (must match both package.json versions), or run
+# manually via workflow_dispatch to test packing/signing — the dispatch path uploads
+# the .tgz as a workflow artifact and does NOT create a release.
 #
 # Secrets (Unity service account with package-signing permission for the org):
 #   UPM_SERVICE_ACCOUNT_KEY_ID, UPM_SERVICE_ACCOUNT_KEY_SECRET, UPM_ORG_ID
 #
 # Reference: https://github.com/openupm/com.example.signed-upm
+#            https://openupm.com/docs/signing-upm-packages.html
 
 on:
   push:
     tags:
-      - "unity-v*"
+      - "v*"
   workflow_dispatch:
     inputs:
       litert_lm_ref:
-        description: "LiteRT-LM git ref to source prebuilt core natives from"
+        description: "LiteRT-LM git ref to source prebuilt core natives from (default: latest release tag)"
         required: false
-        default: "main"
+        default: "latest"
 
 permissions:
   contents: write
 
 env:
-  LITERT_LM_REPO: google-ai-edge/LiteRT-LM
-  LITERT_LM_REF: ${{ github.event.inputs.litert_lm_ref || 'main' }}
   DIST_DIR: /tmp/upm-dist
 
 jobs:
@@ -46,14 +47,47 @@ jobs:
         with:
           path: litert-net
 
+      # The released packages must match the tag: both package.json versions and the
+      # inter-package dependency have to equal the tag without its leading `v`.
+      - name: Verify tag matches package versions
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: litert-net
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CORE_VERSION="$(jq -r .version unity/LiteRT/package.json)"
+          UTILS_VERSION="$(jq -r .version unity/LiteRT.Unity/package.json)"
+          CORE_DEP="$(jq -r '.dependencies["com.github.asus4.litert"]' unity/LiteRT.Unity/package.json)"
+          echo "tag=$TAG_VERSION core=$CORE_VERSION utils=$UTILS_VERSION dep=$CORE_DEP"
+          if [ "$CORE_VERSION" != "$TAG_VERSION" ] || [ "$UTILS_VERSION" != "$TAG_VERSION" ] || [ "$CORE_DEP" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json versions (core=$CORE_VERSION, utils=$UTILS_VERSION, dep=$CORE_DEP)"
+            exit 1
+          fi
+
+      # The prebuilt binaries must share the C ABI of the committed bindings, so default
+      # to the latest LiteRT-LM release tag instead of main (which can drift).
+      - name: Resolve LiteRT-LM ref
+        id: litert-lm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.litert_lm_ref || 'latest' }}
+        run: |
+          if [ "$REQUESTED" = "latest" ]; then
+            REF="$(gh release view --repo google-ai-edge/LiteRT-LM --json tagName -q .tagName)"
+          else
+            REF="$REQUESTED"
+          fi
+          echo "Using LiteRT-LM ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
       # LiteRT-LM ships the prebuilt core (libLiteRt) under prebuilt/<platform>/, which
       # fetch-natives.sh consumes for desktop + iOS (Android core comes from the SDK).
       - name: Checkout LiteRT-LM (prebuilt core natives)
         uses: actions/checkout@v6
         with:
-          repository: ${{ env.LITERT_LM_REPO }}
-          ref: ${{ env.LITERT_LM_REF }}
+          repository: google-ai-edge/LiteRT-LM
+          ref: ${{ steps.litert-lm.outputs.ref }}
           path: litert-lm
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - name: Populate native libraries
         working-directory: litert-net
@@ -69,6 +103,14 @@ jobs:
         working-directory: litert-net
         run: git diff --exit-code unity/LiteRT/Runtime/Bindings
 
+      # Guard against Git LFS pointer files sneaking into the package as "binaries".
+      - name: Verify plugins are real binaries (not LFS pointers)
+        working-directory: litert-net
+        run: |
+          file unity/LiteRT/Plugins/macOS/libLiteRt.dylib | grep Mach-O
+          find unity/LiteRT/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
+            echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
+
       - name: Install Unity UPM CLI
         run: |
           curl -fsSL https://cdn.packages.unity.com/upm-cli/install.sh -o install.sh
@@ -82,15 +124,24 @@ jobs:
           upm pack ./unity/LiteRT       --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
           upm pack ./unity/LiteRT.Unity --organization-id "$UPM_ORG_ID" --destination "$DIST_DIR"
 
-      - name: List packed archives
+      - name: Verify packed archives are signed
         run: |
           ls -la "$DIST_DIR"
           for a in "$DIST_DIR"/*.tgz; do
             echo "--- $a"
-            tar -tzf "$a" | grep -E 'package/(package\.json|\.attestation\.p7m)$' || true
+            tar -tzf "$a" | grep -Fx 'package/package.json'
+            tar -tzf "$a" | grep -Fx 'package/.attestation.p7m'
           done
 
+      # Dispatch runs are for testing: expose the archives as a workflow artifact.
+      - name: Upload archives as workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: upm-packages
+          path: /tmp/upm-dist/*.tgz
+
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: |

@@ -19,10 +19,10 @@ top-to-bottom and registers the **first** plugin it can `dlopen` on the load pat
 
 | # | Plugin basename | Backends bundled | Shipped in |
 | - | --------------- | ---------------- | ---------- |
-| 0 | `libLiteRtGpuAccelerator.so`    | OpenCL + WebGPU/Dawn + Vulkan (multi-backend) | `LiteRT.Gpu.OpenCl.Native` (see caveat) |
+| 0 | `libLiteRtGpuAccelerator.so`    | OpenCL + WebGPU/Dawn + Vulkan (multi-backend) | `LiteRT.Gpu.OpenCl` (see caveat) |
 | 1 | `libLiteRtClGlAccelerator.so`   | OpenCL + GL interop | — (not shipped) |
-| 2 | `libLiteRtOpenClAccelerator.so` | OpenCL only | `LiteRT.Gpu.OpenCl.Native` |
-| 3 | `libLiteRtWebGpuAccelerator.so` | WebGPU / Dawn | `LiteRT.Gpu.WebGpu.Native` |
+| 2 | `libLiteRtOpenClAccelerator.so` | OpenCL only | `LiteRT.Gpu.OpenCl` |
+| 3 | `libLiteRtWebGpuAccelerator.so` | WebGPU / Dawn | `LiteRT.Gpu.WebGpu` |
 | 4 | `libLiteRtVulkanAccelerator.so` | Vulkan | — (not shipped) |
 
 Because the list is ordered, **if two candidate dylibs sit in the same directory, the one
@@ -46,7 +46,7 @@ compute backends are statically linked in:
 
 ## Packaging caveat
 
-`LiteRT.Gpu.OpenCl.Native/runtimes/android-*/native/` currently ships **both**
+`LiteRT.Gpu.OpenCl/runtimes/android-*/native/` currently ships **both**
 `libLiteRtGpuAccelerator.so` (table index 0) and `libLiteRtOpenClAccelerator.so`
 (table index 2). Since index 0 wins, the multi-backend `GpuAccelerator` is the one
 actually registered and the OpenCL-only dylib is dead weight.

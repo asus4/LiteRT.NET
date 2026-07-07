@@ -79,7 +79,6 @@ namespace LiteRT.Unity
             tensorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, length, stride);
             tensor = new NativeArray<byte>(length * stride, Allocator.Persistent);
 
-            // Set constant values
             compute.SetInts(_OutputSize, width, height);
             compute.SetBuffer(kernel, _OutputTensor, tensorBuffer);
         }
@@ -104,7 +103,6 @@ namespace LiteRT.Unity
 
             if (disposing)
             {
-                // Dispose resources
                 if (!hasCustomCompute)
                 {
                     UnityEngine.Object.Destroy(compute);
@@ -155,8 +153,6 @@ namespace LiteRT.Unity
         /// <summary>
         /// Find the appropriate TextureToNativeTensor class for the given input type
         /// </summary>
-        /// <param name="options">An options</param>
-        /// <returns>An instance</returns>
         public static TextureToNativeTensor Create(Options options)
         {
             return options.inputType switch

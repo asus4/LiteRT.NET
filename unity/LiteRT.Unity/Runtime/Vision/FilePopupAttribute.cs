@@ -63,7 +63,6 @@ namespace LiteRT.Unity
 
         private void InitDisplayNames(string regex)
         {
-            // Create the directory if it doesn't exist
             if (!Directory.Exists(Application.streamingAssetsPath))
             {
                 Directory.CreateDirectory(Application.streamingAssetsPath);

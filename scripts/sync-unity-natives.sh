@@ -24,9 +24,9 @@ MAP=(
     "LiteRT/runtimes/android-arm64/native/libLiteRt.so|Android/arm64-v8a/libLiteRt.so"
     "LiteRT/runtimes/android-x64/native/libLiteRt.so|Android/x86_64/libLiteRt.so"
     "LiteRT/runtimes/ios/native/LiteRt.xcframework.zip|iOS/LiteRt.xcframework.zip"
-    "LiteRT.Gpu.Metal.Native/runtimes/osx-arm64/native/libLiteRtMetalAccelerator.dylib|macOS/libLiteRtMetalAccelerator.dylib"
-    "LiteRT.Gpu.OpenCl.Native/runtimes/android-arm64/native/libLiteRtGpuAccelerator.so|Android/arm64-v8a/libLiteRtGpuAccelerator.so"
-    "LiteRT.Gpu.OpenCl.Native/runtimes/android-x64/native/libLiteRtGpuAccelerator.so|Android/x86_64/libLiteRtGpuAccelerator.so"
+    "LiteRT.Gpu.Metal/runtimes/osx-arm64/native/libLiteRtMetalAccelerator.dylib|macOS/libLiteRtMetalAccelerator.dylib"
+    "LiteRT.Gpu.OpenCl/runtimes/android-arm64/native/libLiteRtGpuAccelerator.so|Android/arm64-v8a/libLiteRtGpuAccelerator.so"
+    "LiteRT.Gpu.OpenCl/runtimes/android-x64/native/libLiteRtGpuAccelerator.so|Android/x86_64/libLiteRtGpuAccelerator.so"
 )
 
 echo "Syncing core natives -> $DST"

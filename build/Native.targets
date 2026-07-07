@@ -1,7 +1,7 @@
 <Project>
   <!--
-    Shared MSBuild logic for the LiteRT.NET *.Native packaging projects.
-    Each Native csproj imports this file. It:
+    Shared MSBuild logic for the LiteRT.NET GPU/native-only packaging projects.
+    Each such csproj imports this file. It:
       1. Packs every runtimes/<rid>/native/* file into the nupkg under runtimes/.
       2. For ProjectReference consumers (examples / local dev), copies the
          HOST RID's native files flat into the consuming project's output dir

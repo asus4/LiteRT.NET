@@ -8,17 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       litert_lm_ref:
-        description: "LiteRT-LM git ref to build"
-        required: true
-        default: "main"
-  push:
-    paths:
-      - "scripts/litert-lm-c/**"
-      - ".github/workflows/build-natives.yml"
-
-env:
-  LITERT_LM_REPO: google-ai-edge/LiteRT-LM
-  LITERT_LM_REF: ${{ github.event.inputs.litert_lm_ref || 'main' }}
+        description: "LiteRT-LM git ref to build (default: latest release tag)"
+        required: false
+        default: "latest"
 
 jobs:
   build:
@@ -30,7 +22,9 @@ jobs:
         include:
           - os: ubuntu-24.04
             rid: linux-x64
-          - os: macos-14
+          # macos-15 for Xcode 16: the cxx Rust crate (LiteRT-LM dep) fails to compile
+          # against Xcode 15.4's libc++ on macos-14.
+          - os: macos-15
             rid: osx-arm64
     steps:
       - name: Checkout LiteRT.NET
@@ -38,12 +32,29 @@ jobs:
         with:
           path: litert-net
 
+      # The C ABI of libLiteRtLmC must match the committed bindings, so default to the
+      # latest LiteRT-LM release tag instead of main (which can drift).
+      - name: Resolve LiteRT-LM ref
+        id: litert-lm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.litert_lm_ref || 'latest' }}
+        run: |
+          if [ "$REQUESTED" = "latest" ]; then
+            REF="$(gh release view --repo google-ai-edge/LiteRT-LM --json tagName -q .tagName)"
+          else
+            REF="$REQUESTED"
+          fi
+          echo "Using LiteRT-LM ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
       - name: Checkout LiteRT-LM
         uses: actions/checkout@v6
         with:
-          repository: ${{ env.LITERT_LM_REPO }}
-          ref: ${{ env.LITERT_LM_REF }}
+          repository: google-ai-edge/LiteRT-LM
+          ref: ${{ steps.litert-lm.outputs.ref }}
           path: litert-lm
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3

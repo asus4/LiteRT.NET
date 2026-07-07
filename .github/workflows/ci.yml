@@ -1,11 +1,19 @@
 name: ci
 
 on:
-  # Disable auto triggers until stable version
-  # push:
-  #   branches: [main]
-  # pull_request:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
+    inputs:
+      litert_lm_ref:
+        description: "LiteRT-LM git ref to source prebuilt natives from (default: latest release tag)"
+        required: false
+        default: "latest"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -15,19 +23,34 @@ jobs:
         with:
           path: litert-net
 
+      # The prebuilt binaries and the committed bindings must share the same C ABI, so
+      # default to the latest LiteRT-LM release tag instead of main (which can drift).
+      - name: Resolve LiteRT-LM ref
+        id: litert-lm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.litert_lm_ref || 'latest' }}
+        run: |
+          if [ "$REQUESTED" = "latest" ]; then
+            REF="$(gh release view --repo google-ai-edge/LiteRT-LM --json tagName -q .tagName)"
+          else
+            REF="$REQUESTED"
+          fi
+          echo "Using LiteRT-LM ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
       # Needed by fetch-natives.sh for the prebuilt core / GPU / Gemma plugin.
       - name: Checkout LiteRT-LM
         uses: actions/checkout@v6
         with:
           repository: google-ai-edge/LiteRT-LM
-          ref: main
+          ref: ${{ steps.litert-lm.outputs.ref }}
           path: LiteRT-LM
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Fetch natives
         working-directory: litert-net
@@ -48,9 +71,9 @@ jobs:
       - name: Pack
         working-directory: litert-net
         run: |
-          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj"
-          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.WebGpu.Native/LiteRT.Gpu.WebGpu.Native.csproj"
-          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.OpenCl.Native/LiteRT.Gpu.OpenCl.Native.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.Metal/LiteRT.Gpu.Metal.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.WebGpu/LiteRT.Gpu.WebGpu.csproj"
+          dotnet pack -c Release -o artifacts "src/LiteRT.Gpu.OpenCl/LiteRT.Gpu.OpenCl.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT/LiteRT.csproj"
           dotnet pack -c Release -o artifacts "src/LiteRT.LM/LiteRT.LM.csproj"
 
