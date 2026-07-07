@@ -27,17 +27,10 @@ namespace LiteRT.LM
             return sb.ToString();
         }
 
-        /// <summary>Builds a system-message content object: <c>{"type":"text","text":...}</c>
-        /// (the shape expected by conversation config's system message).</summary>
-        public static string SystemText(string text)
-        {
-            if (text == null) throw new ArgumentNullException(nameof(text));
-            var sb = new StringBuilder(text.Length + 32);
-            sb.Append("{\"type\":\"text\",\"text\":");
-            AppendJsonString(sb, text);
-            sb.Append('}');
-            return sb.ToString();
-        }
+        // Note: no builder for a {"type":"text",...} system-message content object on purpose.
+        // The conversation config accepts the raw instruction text (kept as plain string
+        // content), which every chat template handles; a content *object* reaches
+        // string-concat templates (e.g. Qwen's) as a map and fails to render.
 
         /// <summary>
         /// Extracts and concatenates the <c>"text"</c> values of a message or stream-chunk

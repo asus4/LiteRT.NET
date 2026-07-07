@@ -29,6 +29,12 @@ MAP=(
     "LiteRT.Gpu.OpenCl/runtimes/android-x64/native/libLiteRtGpuAccelerator.so|LiteRT/Plugins/Android/x86_64/libLiteRtGpuAccelerator.so"
     "LiteRT.LM/runtimes/osx-arm64/native/libLiteRtLmC.dylib|LiteRT.LM/Plugins/macOS/libLiteRtLmC.dylib"
     "LiteRT.LM/runtimes/osx-arm64/native/libGemmaModelConstraintProvider.dylib|LiteRT.LM/Plugins/macOS/libGemmaModelConstraintProvider.dylib"
+    "LiteRT.LM/runtimes/android-arm64/native/libLiteRtLmC.so|LiteRT.LM/Plugins/Android/arm64-v8a/libLiteRtLmC.so"
+    "LiteRT.LM/runtimes/android-arm64/native/libGemmaModelConstraintProvider.so|LiteRT.LM/Plugins/Android/arm64-v8a/libGemmaModelConstraintProvider.so"
+    "LiteRT.LM/runtimes/android-x64/native/libLiteRtLmC.so|LiteRT.LM/Plugins/Android/x86_64/libLiteRtLmC.so"
+    "LiteRT.LM/runtimes/android-x64/native/libGemmaModelConstraintProvider.so|LiteRT.LM/Plugins/Android/x86_64/libGemmaModelConstraintProvider.so"
+    "LiteRT.LM/runtimes/ios/native/LiteRtLmC.xcframework.zip|LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework.zip"
+    "LiteRT.LM/runtimes/ios/native/GemmaModelConstraintProvider.xcframework.zip|LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework.zip"
 )
 
 echo "Syncing natives -> $DST"

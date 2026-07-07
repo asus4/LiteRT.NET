@@ -3,17 +3,73 @@
 #
 # This file is copied into a checkout of the LiteRT-LM repository (see build.sh)
 # as `//litert_lm_dotnet/BUILD` and built with:
-#     bazel build //litert_lm_dotnet:LiteRtLmC
+#     bazel build //litert_lm_dotnet:LiteRtLmC                    (host / android)
+#     bazel build //litert_lm_dotnet:LiteRtLmC_xcframework        (iOS, macOS host)
 #
 # `//c:engine` is declared `alwayslink = True`, so all of its exported symbols
 # (visibility("default") / __declspec(dllexport)) survive into the shared object,
 # and the LiteRT core runtime is statically linked in for a self-contained CPU build.
 
+load("@build_bazel_rules_apple//apple:apple.bzl", "apple_xcframework")
+
 cc_binary(
     name = "LiteRtLmC",
+    linkopts = select({
+        # Mirror upstream //c:litert-lm's Linux/Android flags, plus an explicit
+        # 16 KB max-page-size so the .so stays loadable on 16 KB-page Android
+        # devices regardless of NDK-default drift (Unity meta: Is16KbAligned).
+        "@platforms//os:android": [
+            "-Wl,--no-undefined",
+            "-Wl,--strip-all",
+            "-Wl,--gc-sections",
+            "-Wl,-Bsymbolic",
+            "-Wl,-rpath,$$ORIGIN",
+            "-Wl,-z,max-page-size=16384",
+        ],
+        "//conditions:default": [],
+    }),
     linkshared = 1,
     visibility = ["//visibility:public"],
     deps = [
         "//c:engine",
+    ],
+)
+
+# iOS: a loose dylib can't be embedded/signed on device, so ship a dynamic
+# xcframework instead (device + simulator arm64), mirroring the upstream
+# //swift:CLiteRTLM recipe. `exported_symbols` keeps the litert_lm_* C symbols
+# visible despite -fvisibility=hidden; Unity resolves them via
+# [DllImport("__Internal")] once the framework is linked into UnityFramework.
+cc_library(
+    name = "LiteRtLmC_lib",
+    hdrs = [
+        "//c:engine.h",
+        "//schema/capabilities:capabilities_c.h",
+    ],
+    deps = [
+        "//c:engine",
+        "//schema/capabilities:capabilities_c",
+    ],
+)
+
+apple_xcframework(
+    name = "LiteRtLmC_xcframework",
+    bundle_id = "com.koki-ibukuro.litertlm.LiteRtLmC",
+    bundle_name = "LiteRtLmC",
+    features = ["exported_symbols"],
+    infoplists = ["Info.plist"],
+    ios = {
+        "device": ["arm64"],
+        "simulator": ["arm64"],
+    },
+    minimum_os_versions = {
+        "ios": "15.0",
+    },
+    public_hdrs = [
+        "//c:engine.h",
+        "//schema/capabilities:capabilities_c.h",
+    ],
+    deps = [
+        ":LiteRtLmC_lib",
     ],
 )

@@ -6,3 +6,6 @@ All notable changes to this package will be documented in this file.
 
 - Initial release: LiteRT-LM bindings for Unity (LlmEngine, LlmSession, LlmConversation).
 - macOS (Apple Silicon) natives: libLiteRtLmC + Gemma model constraint provider.
+- iOS natives (device + simulator arm64, min iOS 15) as zipped xcframeworks with an
+  editor post-build step that links/embeds them into the Xcode project.
+- Android natives (arm64-v8a, x86_64; 16 KB-page aligned; minSdk 24, IL2CPP).

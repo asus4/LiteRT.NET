@@ -6,7 +6,16 @@ Part of [LiteRT.NET](https://github.com/asus4/LiteRT.NET). Depends on the core `
 
 ## Status
 
-Experimental. macOS (Apple Silicon) Editor/Standalone only for now; other platforms follow.
+Experimental.
+
+| Platform | Status |
+| --- | --- |
+| macOS (Apple Silicon) Editor/Standalone | ✅ |
+| iOS (device arm64 + simulator arm64) | ✅ CPU backend |
+| Android (arm64-v8a, x86_64; minSdk 24, IL2CPP) | ✅ CPU backend |
+| Windows / Linux | ⏳ planned |
+
+GPU backends on mobile are not wired up yet — use `backend: "cpu"` there.
 
 ## Usage
 
@@ -47,7 +56,17 @@ the LiteRT-LM docs. `LlmMessage` has helpers for building/parsing the JSON.
 
 ## Native libraries
 
-`Plugins/macOS/` ships `libLiteRtLmC.dylib` (the LiteRT-LM C API, built by
+`Plugins/` ships the LiteRT-LM C API (`libLiteRtLmC`, built by
 `scripts/litert-lm-c/build.sh` in the LiteRT.NET repo) and its load-time dependency
-`libGemmaModelConstraintProvider.dylib`. GPU inference (`backend: "gpu"`) additionally
-uses the Metal accelerator shipped with the core package.
+`libGemmaModelConstraintProvider` per platform:
+
+- `macOS/`: `libLiteRtLmC.dylib` + `libGemmaModelConstraintProvider.dylib`. GPU
+  inference (`backend: "gpu"`) additionally uses the Metal accelerator shipped with
+  the core package.
+- `Android/arm64-v8a/`, `Android/x86_64/`: `libLiteRtLmC.so` +
+  `libGemmaModelConstraintProvider.so`, 16 KB-page aligned. Requires IL2CPP + ARM64
+  target architectures and minSdk 24.
+- `iOS/`: `LiteRtLmC.xcframework.zip` + `GemmaModelConstraintProvider.xcframework.zip`
+  (device + simulator arm64, min iOS 15). An editor post-build step unzips, links
+  them into UnityFramework, and embeds them in the app — symbols resolve via
+  `[DllImport("__Internal")]`.

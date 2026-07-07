@@ -106,8 +106,11 @@ jobs:
             echo "::error::No successful build-natives run found; run that workflow first to produce libLiteRtLmC artifacts."
             exit 1
           fi
-          gh run download "$RUN_ID" -n libLiteRtLmC-osx-arm64 -D out
-          ls -la out
+          gh run download "$RUN_ID" -n libLiteRtLmC-osx-arm64     -D out
+          gh run download "$RUN_ID" -n libLiteRtLmC-android-arm64 -D out/android-arm64
+          gh run download "$RUN_ID" -n libLiteRtLmC-android-x64   -D out/android-x64
+          gh run download "$RUN_ID" -n libLiteRtLmC-ios           -D out/ios
+          ls -laR out
 
       - name: Populate native libraries
         working-directory: litert-net
@@ -129,6 +132,10 @@ jobs:
         run: |
           file unity/LiteRT/Plugins/macOS/libLiteRt.dylib | grep Mach-O
           file unity/LiteRT.LM/Plugins/macOS/libLiteRtLmC.dylib | grep Mach-O
+          file unity/LiteRT.LM/Plugins/Android/arm64-v8a/libLiteRtLmC.so | grep ELF
+          file unity/LiteRT.LM/Plugins/Android/x86_64/libLiteRtLmC.so | grep ELF
+          unzip -l unity/LiteRT.LM/Plugins/iOS/LiteRtLmC.xcframework.zip | grep -q ios-arm64/
+          unzip -l unity/LiteRT.LM/Plugins/iOS/GemmaModelConstraintProvider.xcframework.zip | grep -q ios-arm64/
           find unity/LiteRT/Plugins unity/LiteRT.LM/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
             echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
 

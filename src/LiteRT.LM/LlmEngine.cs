@@ -110,8 +110,13 @@ namespace LiteRT.LM
 
                     if (options.SystemInstruction != null)
                     {
+                        // Pass the raw text, not a {"type":"text",...} content object: the C API
+                        // keeps an unparseable string as plain string content, which every chat
+                        // template accepts. A content *object* is a map in the template engine and
+                        // breaks string-concat templates (e.g. Qwen's "'...' + content"); the data
+                        // processors only normalize string/array content, never a bare object.
                         LiteRtLmNative.litert_lm_conversation_config_set_system_message(
-                            config, LlmMessage.SystemText(options.SystemInstruction));
+                            config, options.SystemInstruction);
                     }
                     if (options.InitialMessagesJson != null)
                     {

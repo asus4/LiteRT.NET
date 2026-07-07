@@ -82,9 +82,11 @@ place_file() {
     local class; class="$(classify "$base")"
     [ "$class" = "skip" ] && return 0
 
-    # iOS core ships as an xcframework.zip (build_ios_core_xcframework, below), not a loose
-    # dylib — a bare .dylib can't be embedded/code-signed on iOS.
-    if [ "$class" = "core" ] && { [[ "$rid" == ios-* ]] || [[ "$rid" == iossimulator-* ]]; }; then
+    # iOS ships xcframework.zips, not loose dylibs — a bare .dylib can't be embedded/
+    # code-signed on iOS. Core is wrapped by build_ios_core_xcframework below; the LM
+    # engine + Gemma provider zips come from build.sh ios via place_lm_ios_xcframeworks.
+    if { [ "$class" = "core" ] || [ "$class" = "lm" ]; } && \
+        { [[ "$rid" == ios-* ]] || [[ "$rid" == iossimulator-* ]]; }; then
         return 0
     fi
 
@@ -118,6 +120,19 @@ from_local_lm_out() {
     [ -d "$LITERT_LM_OUT" ] || return 0
     local f
     for f in "$LITERT_LM_OUT"/*; do
+        [ -f "$f" ] && place_file "$f" "$rid"
+    done
+}
+
+# Cross-built LM library for non-host RIDs: build.sh <src> out/<rid> <target> writes
+# per-RID subdirs (out/android-arm64, out/android-x64, ...; out/ios is handled by
+# place_lm_ios_xcframeworks below).
+from_local_lm_out_rid() {
+    local rid="$1"
+    local dir="$LITERT_LM_OUT/$rid"
+    [ -d "$dir" ] || return 0
+    local f
+    for f in "$dir"/*; do
         [ -f "$f" ] && place_file "$f" "$rid"
     done
 }
@@ -165,6 +180,7 @@ for rid in $RIDS; do
     if [ "$rid" = "$HOST_RID" ]; then
         from_local_lm_out "$rid"
     fi
+    from_local_lm_out_rid "$rid"
     fetch_core_from_sdk "$rid"
 done
 
@@ -180,5 +196,24 @@ build_ios_core_xcframework() {
     "$REPO_DIR/scripts/make-ios-xcframework.sh" "$LITERT_LM_DIR/prebuilt" "$CORE_PKG/runtimes/ios/native"
 }
 build_ios_core_xcframework
+
+# LM iOS payloads are prebuilt xcframework.zips (engine + Gemma provider) produced by
+# scripts/litert-lm-c/build.sh <src> out/ios ios — copy them if present.
+place_lm_ios_xcframeworks() {
+    case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
+    local dir="$LITERT_LM_OUT/ios"
+    [ -d "$dir" ] || { echo "  (no LM iOS zips: $dir — run scripts/litert-lm-c/build.sh <src> out/ios ios)"; return 0; }
+    local out="$LM_PKG/runtimes/ios/native"
+    local f placed=0
+    for f in "$dir"/*.xcframework.zip; do
+        [ -f "$f" ] || continue
+        mkdir -p "$out"
+        cp -f "$f" "$out/$(basename "$f")"
+        echo "  + ios/lm  $(basename "$f")"
+        placed=1
+    done
+    [ "$placed" = 1 ] || echo "  (no *.xcframework.zip in $dir)"
+}
+place_lm_ios_xcframeworks
 
 echo "Done."

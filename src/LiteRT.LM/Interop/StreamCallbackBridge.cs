@@ -60,9 +60,7 @@ namespace LiteRT.LM.Interop
         /// <summary>Allocates the GCHandle passed to native as <c>callback_data</c>.</summary>
         internal static GCHandle Pin(Context context) => GCHandle.Alloc(context);
 
-#if ENABLE_IL2CPP
-        [AOT.MonoPInvokeCallback(typeof(LiteRtLmStreamCallback))]
-#endif
+        [MonoPInvokeCallback(typeof(LiteRtLmStreamCallback))]
         private static void OnChunk(IntPtr callbackData, string? chunk, bool isFinal, string? errorMsg)
         {
             var handle = GCHandle.FromIntPtr(callbackData);

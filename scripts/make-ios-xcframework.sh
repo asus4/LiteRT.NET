@@ -12,15 +12,19 @@
 # Usage: make-ios-xcframework.sh [PREBUILT_DIR] [OUT_DIR]
 #   PREBUILT_DIR default ../LiteRT-LM/prebuilt (expects ios_arm64/, ios_sim_arm64/)
 #   OUT_DIR      default src/LiteRT/runtimes/ios/native
+# Env (defaults = the LiteRT core framework; override to wrap other prebuilt dylibs,
+# e.g. build.sh ios wraps libGemmaModelConstraintProvider this way):
+#   FRAMEWORK_NAME, SRC_DYLIB_NAME, BUNDLE_ID, MIN_OS
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREBUILT_DIR="${1:-$REPO_ROOT/../LiteRT-LM/prebuilt}"
 OUT_DIR="${2:-$REPO_ROOT/src/LiteRT/runtimes/ios/native}"
 
-FRAMEWORK_NAME="LiteRt"
-BUNDLE_ID="com.koki-ibukuro.litert.LiteRt"
-MIN_OS="14.0"
+FRAMEWORK_NAME="${FRAMEWORK_NAME:-LiteRt}"
+SRC_DYLIB_NAME="${SRC_DYLIB_NAME:-libLiteRt.dylib}"
+BUNDLE_ID="${BUNDLE_ID:-com.koki-ibukuro.litert.LiteRt}"
+MIN_OS="${MIN_OS:-14.0}"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -56,8 +60,8 @@ PLIST
 
 DEVICE_FW="$WORK/device/$FRAMEWORK_NAME.framework"
 SIM_FW="$WORK/sim/$FRAMEWORK_NAME.framework"
-make_framework "$DEVICE_FW" "$PREBUILT_DIR/ios_arm64/libLiteRt.dylib"     "iPhoneOS"
-make_framework "$SIM_FW"    "$PREBUILT_DIR/ios_sim_arm64/libLiteRt.dylib" "iPhoneSimulator"
+make_framework "$DEVICE_FW" "$PREBUILT_DIR/ios_arm64/$SRC_DYLIB_NAME"     "iPhoneOS"
+make_framework "$SIM_FW"    "$PREBUILT_DIR/ios_sim_arm64/$SRC_DYLIB_NAME" "iPhoneSimulator"
 
 echo "Creating xcframework..."
 xcodebuild -create-xcframework \

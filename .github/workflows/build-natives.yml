@@ -22,10 +22,28 @@ jobs:
         include:
           - os: ubuntu-24.04
             rid: linux-x64
+            target: host
+            outdir: out
           # macos-15 for Xcode 16: the cxx Rust crate (LiteRT-LM dep) fails to compile
           # against Xcode 15.4's libc++ on macos-14.
           - os: macos-15
             rid: osx-arm64
+            target: host
+            outdir: out
+          - os: ubuntu-24.04
+            rid: android-arm64
+            target: android_arm64
+            outdir: out/android-arm64
+          - os: ubuntu-24.04
+            rid: android-x64
+            target: android_x86_64
+            outdir: out/android-x64
+          # iOS emits both LiteRtLmC + GemmaModelConstraintProvider xcframework zips
+          # (device + simulator arm64) in one job.
+          - os: macos-15
+            rid: ios
+            target: ios
+            outdir: out/ios
     steps:
       - name: Checkout LiteRT.NET
         uses: actions/checkout@v6
@@ -59,14 +77,30 @@ jobs:
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
 
+      # Pin the NDK rather than trusting the runner image: the artifact's 16 KB page
+      # alignment and libc++ come from the NDK, and upstream wants r28b+.
+      - name: Set up Android NDK
+        if: startsWith(matrix.rid, 'android')
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28b
+          add-to-path: false
+
       - name: Build libLiteRtLmC
         run: |
-          chmod +x litert-net/scripts/litert-lm-c/build.sh
-          litert-net/scripts/litert-lm-c/build.sh "$GITHUB_WORKSPACE/litert-lm" "$GITHUB_WORKSPACE/out"
+          # Only export for android targets: LiteRT-LM's WORKSPACE registers the NDK
+          # toolchain whenever ANDROID_NDK_HOME is set, and an empty value breaks it.
+          if [[ "${{ matrix.target }}" == android_* ]]; then
+            export ANDROID_NDK_HOME="${{ steps.ndk.outputs.ndk-path }}"
+          fi
+          chmod +x litert-net/scripts/litert-lm-c/build.sh litert-net/scripts/make-ios-xcframework.sh
+          litert-net/scripts/litert-lm-c/build.sh "$GITHUB_WORKSPACE/litert-lm" \
+            "$GITHUB_WORKSPACE/${{ matrix.outdir }}" "${{ matrix.target }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: libLiteRtLmC-${{ matrix.rid }}
-          path: out/*
+          path: ${{ matrix.outdir }}/*
           if-no-files-found: error
