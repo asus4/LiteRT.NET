@@ -87,6 +87,7 @@ jobs:
           repository: google-ai-edge/LiteRT-LM
           ref: ${{ steps.litert-lm.outputs.ref }}
           path: litert-lm
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - name: Populate native libraries
         working-directory: litert-net
@@ -101,6 +102,14 @@ jobs:
       - name: Verify the bindings synced clean (no drift)
         working-directory: litert-net
         run: git diff --exit-code unity/LiteRT/Runtime/Bindings
+
+      # Guard against Git LFS pointer files sneaking into the package as "binaries".
+      - name: Verify plugins are real binaries (not LFS pointers)
+        working-directory: litert-net
+        run: |
+          file unity/LiteRT/Plugins/macOS/libLiteRt.dylib | grep Mach-O
+          find unity/LiteRT/Plugins -type f ! -name '*.meta' -size -1k | grep . && {
+            echo "::error::Suspiciously small plugin files found (LFS pointers?)"; exit 1; } || true
 
       - name: Install Unity UPM CLI
         run: |

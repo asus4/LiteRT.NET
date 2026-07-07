@@ -46,6 +46,7 @@ jobs:
           repository: google-ai-edge/LiteRT-LM
           ref: ${{ steps.litert-lm.outputs.ref }}
           path: LiteRT-LM
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - uses: actions/setup-dotnet@v5
         with:

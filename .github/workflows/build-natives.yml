@@ -22,7 +22,9 @@ jobs:
         include:
           - os: ubuntu-24.04
             rid: linux-x64
-          - os: macos-14
+          # macos-15 for Xcode 16: the cxx Rust crate (LiteRT-LM dep) fails to compile
+          # against Xcode 15.4's libc++ on macos-14.
+          - os: macos-15
             rid: osx-arm64
     steps:
       - name: Checkout LiteRT.NET
@@ -52,6 +54,7 @@ jobs:
           repository: google-ai-edge/LiteRT-LM
           ref: ${{ steps.litert-lm.outputs.ref }}
           path: litert-lm
+          lfs: true  # prebuilt/ binaries are LFS; without this we get pointer files
 
       - name: Set up Bazelisk
         uses: bazelbuild/setup-bazelisk@v3
