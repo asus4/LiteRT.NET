@@ -8,13 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       litert_lm_ref:
-        description: "LiteRT-LM git ref to build"
-        required: true
-        default: "main"
-
-env:
-  LITERT_LM_REPO: google-ai-edge/LiteRT-LM
-  LITERT_LM_REF: ${{ github.event.inputs.litert_lm_ref || 'main' }}
+        description: "LiteRT-LM git ref to build (default: latest release tag)"
+        required: false
+        default: "latest"
 
 jobs:
   build:
@@ -34,11 +30,27 @@ jobs:
         with:
           path: litert-net
 
+      # The C ABI of libLiteRtLmC must match the committed bindings, so default to the
+      # latest LiteRT-LM release tag instead of main (which can drift).
+      - name: Resolve LiteRT-LM ref
+        id: litert-lm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.litert_lm_ref || 'latest' }}
+        run: |
+          if [ "$REQUESTED" = "latest" ]; then
+            REF="$(gh release view --repo google-ai-edge/LiteRT-LM --json tagName -q .tagName)"
+          else
+            REF="$REQUESTED"
+          fi
+          echo "Using LiteRT-LM ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
       - name: Checkout LiteRT-LM
         uses: actions/checkout@v6
         with:
-          repository: ${{ env.LITERT_LM_REPO }}
-          ref: ${{ env.LITERT_LM_REF }}
+          repository: google-ai-edge/LiteRT-LM
+          ref: ${{ steps.litert-lm.outputs.ref }}
           path: litert-lm
 
       - name: Set up Bazelisk

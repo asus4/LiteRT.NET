@@ -4,6 +4,9 @@
   "displayName": "LiteRT Unity Utilities",
   "description": "Optional Unity helpers for LiteRT",
   "unity": "2022.3",
+  "documentationUrl": "https://github.com/asus4/LiteRT.NET",
+  "changelogUrl": "https://github.com/asus4/LiteRT.NET/blob/main/unity/LiteRT.Unity/CHANGELOG.md",
+  "licensesUrl": "https://github.com/asus4/LiteRT.NET/blob/main/LICENSE",
   "keywords": [
     "ai",
     "litert",
