@@ -25,6 +25,7 @@ PKG_DIR="$SRC_DIR/litert_lm_dotnet"
 mkdir -p "$PKG_DIR"
 cp "$SCRIPT_DIR/BUILD.bazel" "$PKG_DIR/BUILD"
 cp "$SCRIPT_DIR/Info.plist" "$PKG_DIR/Info.plist"
+cp "$SCRIPT_DIR/exported_symbols.lds" "$PKG_DIR/exported_symbols.lds"
 
 BIN_DIR="$SRC_DIR/bazel-bin/litert_lm_dotnet"
 
@@ -132,6 +133,10 @@ build_ios() {
         # (grep -c, not -q: -q's early exit SIGPIPEs nm, which pipefail reports as failure.)
         [ "$(nm -gU "$slice" | grep -c ' _litert_lm_')" -gt 0 ] \
             || { echo "ERROR: $slice exports no litert_lm_* symbols" >&2; exit 1; }
+        # The statically linked core must stay private (see exported_symbols.lds): a leaked
+        # LiteRt* export can hijack the core package's __Internal P/Invoke bindings on iOS.
+        [ "$(nm -gU "$slice" | grep -c ' _LiteRt')" -eq 0 ] \
+            || { echo "ERROR: $slice leaks LiteRt* core symbols (export list not applied?)" >&2; exit 1; }
         if otool -L "$slice" | grep -qE 'libLiteRt\.dylib|libGemmaModelConstraintProvider\.dylib'; then
             echo "ERROR: $slice still references a bare dylib:" >&2
             otool -L "$slice" >&2

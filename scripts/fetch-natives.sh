@@ -2,9 +2,15 @@
 # Populates the per-RID native payloads (runtimes/<rid>/native, .gitignore'd) for the
 # LiteRT.NET packages (core -> src/LiteRT, LM -> src/LiteRT.LM, GPU -> src/LiteRT.Gpu.*),
 # from three best-effort sources (missing pieces warn, not fatal):
-#   - LiteRT-LM/prebuilt/<platform>/  desktop+iOS core, GPU accelerators, LM samplers, Gemma plugin
-#   - $LITERT_LM_OUT (default: out/)  locally built libLiteRtLmC (+ Gemma) for the host RID
-#   - official LiteRT SDK             core for RIDs prebuilt lacks (e.g. Android)
+#   - official LiteRT SDK             core + desktop/iOS GPU accelerators, ALL platforms.
+#                                     The committed core bindings match this SDK version's
+#                                     C ABI — LiteRT-LM/prebuilt/ tracks a newer LiteRT
+#                                     revision whose ABI differs (e.g. 3-arg
+#                                     LiteRtCreateModelFromFile), so core must NOT come
+#                                     from there. Bump CORE_SDK_BASE only together with a
+#                                     bindings review.
+#   - LiteRT-LM/prebuilt/<platform>/  LM payloads (Gemma plugin) + Android GPU accelerator
+#   - $LITERT_LM_OUT (default: out/)  locally built libLiteRtLmC (+ Gemma) per RID
 # Run before `dotnet pack`/`dotnet run`.
 #
 # Env: LITERT_LM_DIR (LiteRT-LM checkout, default ../LiteRT-LM), LITERT_LM_OUT (LM build
@@ -104,13 +110,25 @@ place_file() {
     echo "  + $rid/$class  $name"
 }
 
+# LM payloads (Gemma plugin) for every RID; GPU accelerators for Android only (their
+# historical source — the SDK carries no libLiteRtGpuAccelerator.so). Desktop/iOS core
+# and GPU come from the SDK instead: prebuilt/ tracks a newer LiteRT revision whose C ABI
+# (3-arg LiteRtCreateModelFromFile et al.) does not match the committed bindings.
 from_prebuilt() {
     local rid="$1" platform; platform="$(prebuilt_platform "$rid")"
     local dir="$LITERT_LM_DIR/prebuilt/$platform"
     [ -d "$dir" ] || { echo "  (no prebuilt dir: $dir)"; return 0; }
-    local f
+    local f base class
     for f in "$dir"/*; do
-        [ -f "$f" ] && place_file "$f" "$rid"
+        [ -f "$f" ] || continue
+        base="$(basename "$f")"
+        class="$(classify "$base")"
+        case "$class" in
+            lm) ;;
+            gpu-*) [[ "$rid" == android-* ]] || continue ;;
+            *) continue ;;
+        esac
+        place_file "$f" "$rid"
     done
 }
 
@@ -137,28 +155,70 @@ from_local_lm_out_rid() {
     done
 }
 
-# Core for RIDs prebuilt lacks (Android): fetch from the official SDK.
-fetch_core_from_sdk() {
-    local rid="$1"
-    local core_out; core_out="$(dest_dir core "$rid")"
-    [ -f "$core_out/libLiteRt.so" ] || [ -f "$core_out/libLiteRt.dylib" ] || \
-        [ -f "$core_out/LiteRt.dll" ] && return 0
-
-    local token=""
-    case "$rid" in
-        android-arm64) token="android_arm64" ;;
-        android-x64)   token="android_x86_64" ;;
+# .NET RID -> SDK bucket platform token.
+sdk_platform() {
+    case "$1" in
+        osx-arm64)            echo "macos_arm64" ;;
+        linux-x64)            echo "linux_x86_64" ;;
+        linux-arm64)          echo "linux_arm64" ;;
+        win-x64)              echo "windows_x86_64" ;;
+        android-arm64)        echo "android_arm64" ;;
+        android-x64)          echo "android_x86_64" ;;
+        ios-arm64)            echo "ios_arm64" ;;
+        iossimulator-arm64)   echo "ios_sim_arm64" ;;
+        *)                    echo "" ;;
     esac
-    [ -z "$token" ] && return 0
+}
 
-    local url="$CORE_SDK_BASE/$token/libLiteRt.so"
-    mkdir -p "$core_out"
-    if curl -fsSL "$url" -o "$core_out/libLiteRt.so" 2>/dev/null; then
-        echo "  + $rid/core  libLiteRt.so (SDK)"
-    else
-        rm -f "$core_out/libLiteRt.so"
-        echo "  WARNING: core for $rid unavailable (prebuilt has no Android core; SDK fetch failed: $url)" >&2
+# sdk_fetch_file <rid> <sdk-file> — download one SDK binary and place_file it (skips if
+# the destination already exists so re-runs stay offline-friendly).
+sdk_fetch_file() {
+    local rid="$1" file="$2"
+    local token; token="$(sdk_platform "$rid")"
+    [ -n "$token" ] || return 0
+
+    local class; class="$(classify "$file")"
+    local out; out="$(dest_dir "$class" "$rid")"
+    local name="$file"
+    if [ "$class" = "core" ] && [[ "$rid" == win-* ]]; then
+        name="LiteRt.dll"  # Core is [DllImport("LiteRt")]; .NET resolves "LiteRt.dll" on Windows.
     fi
+    [ -f "$out/$name" ] && return 0
+
+    local url="$CORE_SDK_BASE/$token/$file"
+    mkdir -p "$out"
+    if curl -fsSL "$url" -o "$out/$name" 2>/dev/null; then
+        echo "  + $rid/$class  $name (SDK)"
+    else
+        rm -f "$out/$name"
+        echo "  WARNING: $file for $rid unavailable (SDK fetch failed: $url)" >&2
+    fi
+}
+
+# Core (+ matching-generation GPU accelerator) from the official SDK. iOS core is NOT
+# placed as a loose dylib — build_ios_core_xcframework below wraps the SDK dylibs.
+fetch_from_sdk() {
+    local rid="$1"
+    case "$rid" in
+        osx-arm64)
+            sdk_fetch_file "$rid" "libLiteRt.dylib"
+            sdk_fetch_file "$rid" "libLiteRtMetalAccelerator.dylib"
+            ;;
+        linux-x64|linux-arm64)
+            sdk_fetch_file "$rid" "libLiteRt.so"
+            sdk_fetch_file "$rid" "libLiteRtWebGpuAccelerator.so"
+            ;;
+        win-x64)
+            sdk_fetch_file "$rid" "libLiteRt.dll"
+            sdk_fetch_file "$rid" "libLiteRtWebGpuAccelerator.dll"
+            ;;
+        android-arm64|android-x64)
+            sdk_fetch_file "$rid" "libLiteRt.so"
+            ;;
+        ios-arm64|iossimulator-arm64)
+            sdk_fetch_file "$rid" "libLiteRtMetalAccelerator.dylib"
+            ;;
+    esac
 }
 
 HOST_RID="osx-arm64"
@@ -181,19 +241,32 @@ for rid in $RIDS; do
         from_local_lm_out "$rid"
     fi
     from_local_lm_out_rid "$rid"
-    fetch_core_from_sdk "$rid"
+    fetch_from_sdk "$rid"
 done
 
-# Build the iOS core xcframework.zip when an iOS RID is requested and both prebuilt slices
-# exist. macOS-only (needs xcodebuild).
+# Build the iOS core xcframework.zip when an iOS RID is requested, from the SDK dylibs
+# (ABI-matched to the bindings — see header). macOS-only (needs xcodebuild).
 build_ios_core_xcframework() {
     case " $RIDS " in *" ios-arm64 "*|*" iossimulator-arm64 "*) ;; *) return 0 ;; esac
     [ "$(uname -s)" = "Darwin" ] || { echo "  (skip iOS xcframework: not macOS)"; return 0; }
-    local dev="$LITERT_LM_DIR/prebuilt/ios_arm64/libLiteRt.dylib"
-    local sim="$LITERT_LM_DIR/prebuilt/ios_sim_arm64/libLiteRt.dylib"
-    [ -f "$dev" ] && [ -f "$sim" ] || { echo "  (skip iOS xcframework: missing prebuilt dylibs)"; return 0; }
-    echo "[ios] building LiteRt.xcframework.zip"
-    "$REPO_DIR/scripts/make-ios-xcframework.sh" "$LITERT_LM_DIR/prebuilt" "$CORE_PKG/runtimes/ios/native"
+
+    # Stage the SDK dylibs in the layout make-ios-xcframework.sh expects
+    # (<dir>/ios_arm64/libLiteRt.dylib + <dir>/ios_sim_arm64/libLiteRt.dylib).
+    local stage="$CORE_PKG/runtimes/.sdk-ios"
+    local token
+    for token in ios_arm64 ios_sim_arm64; do
+        if [ ! -f "$stage/$token/libLiteRt.dylib" ]; then
+            mkdir -p "$stage/$token"
+            if ! curl -fsSL "$CORE_SDK_BASE/$token/libLiteRt.dylib" \
+                -o "$stage/$token/libLiteRt.dylib" 2>/dev/null; then
+                rm -f "$stage/$token/libLiteRt.dylib"
+                echo "  (skip iOS xcframework: SDK fetch failed for $token)" >&2
+                return 0
+            fi
+        fi
+    done
+    echo "[ios] building LiteRt.xcframework.zip (SDK dylibs)"
+    "$REPO_DIR/scripts/make-ios-xcframework.sh" "$stage" "$CORE_PKG/runtimes/ios/native"
 }
 build_ios_core_xcframework
 

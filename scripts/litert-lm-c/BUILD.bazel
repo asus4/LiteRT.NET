@@ -56,6 +56,10 @@ apple_xcframework(
     name = "LiteRtLmC_xcframework",
     bundle_id = "com.koki-ibukuro.litertlm.LiteRtLmC",
     bundle_name = "LiteRtLmC",
+    # Export ONLY litert_lm_*: the statically linked LiteRT core must not leak LiteRt*
+    # exports, or iOS __Internal P/Invoke can bind the core package's calls to this
+    # framework's (newer, ABI-incompatible) copy instead of LiteRt.framework.
+    exported_symbols_lists = ["exported_symbols.lds"],
     features = ["exported_symbols"],
     infoplists = ["Info.plist"],
     ios = {
