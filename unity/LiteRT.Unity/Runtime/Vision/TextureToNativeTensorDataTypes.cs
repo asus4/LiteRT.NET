@@ -7,9 +7,6 @@ using UnityEngine.Assertions;
 
 namespace LiteRT.Unity
 {
-    /// <summary>
-    /// TextureToNativeTensor for float32 (float) input type
-    /// </summary>
     public sealed class TextureToNativeTensorFloat32 : TextureToNativeTensor
     {
         public TextureToNativeTensorFloat32(Options options)
@@ -18,11 +15,8 @@ namespace LiteRT.Unity
     }
 
     /// <summary>
-    /// TextureToNativeTensor for uint8 (byte) input type
-    ///
-    /// Note:
-    /// Run compute shader with Float32 then convert to UInt8(byte) in C#
-    /// Because ComputeBuffer doesn't support UInt8 type
+    /// ComputeBuffer doesn't support UInt8, so the compute shader runs as Float32
+    /// and the result is converted to UInt8 here in C#.
     /// </summary>
     public sealed class TextureToNativeTensorUInt8 : TextureToNativeTensor
     {
@@ -49,7 +43,6 @@ namespace LiteRT.Unity
             // Reinterpret (byte * 4) as float
             NativeSlice<float> tensorF32 = tensor.Slice().SliceConvert<float>();
 
-            // Cast Float32 to Uint8 using Burst
             var job = new CastFloat32toUInt8Job()
             {
                 input = tensorF32,
@@ -75,9 +68,6 @@ namespace LiteRT.Unity
         }
     }
 
-    /// <summary>
-    /// TextureToNativeTensor for int32 (int) input type
-    /// </summary>
     public sealed class TextureToNativeTensorInt32 : TextureToNativeTensor
     {
         const int kJOB_BATCH_SIZE = 64;
@@ -106,7 +96,6 @@ namespace LiteRT.Unity
             // Reinterpret (byte * 4) as int
             NativeSlice<int> sliceI32 = tensorInt32.Slice().SliceConvert<int>();
 
-            // Cast Float32 to Int32 using Burst
             var job = new CastFloat32toInt32Job()
             {
                 input = sliceF32,
@@ -116,9 +105,6 @@ namespace LiteRT.Unity
             return tensorInt32;
         }
 
-        /// <summary>
-        /// Cast f32 to int32 using Burst Job
-        /// </summary>
         [BurstCompile]
         internal struct CastFloat32toInt32Job : IJobParallelFor
         {

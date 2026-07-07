@@ -11,10 +11,6 @@ on:
         description: "LiteRT-LM git ref to build"
         required: true
         default: "main"
-  push:
-    paths:
-      - "scripts/litert-lm-c/**"
-      - ".github/workflows/build-natives.yml"
 
 env:
   LITERT_LM_REPO: google-ai-edge/LiteRT-LM

@@ -37,7 +37,6 @@ namespace LiteRT.Unity
         /// <summary>Becomes true once <see cref="InitializeAsync"/> has finished.</summary>
         public bool IsInitialized { get; private set; }
 
-        // Profilers
         protected static readonly ProfilerMarker preprocessPerfMarker = new($"{typeof(BaseVisionTask).Name}.Preprocess");
         protected static readonly ProfilerMarker runPerfMarker = new($"{typeof(BaseVisionTask).Name}.Session.Run");
         protected static readonly ProfilerMarker postprocessPerfMarker = new($"{typeof(BaseVisionTask).Name}.Postprocess");
@@ -47,7 +46,6 @@ namespace LiteRT.Unity
         /// </summary>
         /// <param name="modelPath">A model path: absolute, URL, or relative to StreamingAssets</param>
         /// <param name="accelerator">Hardware accelerator flags used to compile the model</param>
-        /// <param name="cancellationToken">A cancellation token</param>
         protected async ValueTask InitializeAsync(
             string modelPath,
             LiteRtHwAccelerators accelerator = LiteRtHwAccelerators.Cpu,
@@ -102,27 +100,22 @@ namespace LiteRT.Unity
                 throw new InvalidOperationException($"Call {nameof(InitializeAsync)} before {nameof(Run)}");
             }
 
-            // Pre process
             preprocessPerfMarker.Begin();
             PreProcess(texture);
             preprocessPerfMarker.End();
 
-            // Run inference
             runPerfMarker.Begin();
             compiledModel.Run(signature, inputBuffers, outputBuffers);
             runPerfMarker.End();
 
-            // Post process
             postprocessPerfMarker.Begin();
             PostProcess();
             postprocessPerfMarker.End();
         }
 
         /// <summary>
-        /// Pre process the input texture
-        /// Set all input tensors for the model
+        /// Pre process the input texture and set all input tensors for the model
         /// </summary>
-        /// <param name="texture">An input texture</param>
         protected virtual void PreProcess(Texture texture)
         {
             float srcAspect = (float)texture.width / texture.height;

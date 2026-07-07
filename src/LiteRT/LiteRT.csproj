@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>
     <RootNamespace>LiteRT</RootNamespace>
     <AssemblyName>LiteRT</AssemblyName>
     <PackageId>LiteRT</PackageId>
     <Description>C# bindings for Google LiteRT + Core native libs</Description>
-    <IsAotCompatible Condition="'$(TargetFramework)' == 'net8.0'">true</IsAotCompatible>
+    <IsAotCompatible Condition="'$(TargetFramework)' == 'net10.0'">true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

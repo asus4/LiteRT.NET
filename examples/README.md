@@ -20,7 +20,7 @@ dotnet run --project examples/MinimalInference -- <model.tflite> gpu
 
 Loads a small `.tflite` model, runs inference, and prints the output tensor. The second
 argument selects the accelerator (`cpu` or `gpu`). GPU requires a backend package; this
-example references `LiteRT.Gpu.Metal.Native` (Metal — the better fit for Unity on Apple)
+example references `LiteRT.Gpu.Metal` (Metal — the better fit for Unity on Apple)
 so the accelerator dylib sits beside the core library. `LiteRtEnvironment` sets the
 `RuntimeLibraryDir` option so the runtime can load it, and limits auto-registration to the
 requested accelerators (a CPU-only run stays quiet instead of warning about absent
@@ -37,7 +37,7 @@ dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" cpu
 dotnet run --project examples/SimpleLlm -- /path/to/model.litertlm "Hello" gpu
 ```
 
-For GPU decode this example references `LiteRT.Gpu.WebGpu.Native`: the Metal accelerator
+For GPU decode this example references `LiteRT.Gpu.WebGpu`: the Metal accelerator
 mis-computes LM logits (repetition loop), whereas WebGPU/Dawn is correct. On-GPU TopK
 sampling falls back to CPU sampling (correct output) because macOS ships no working GPU
 sampler today — see `classify()` in `scripts/fetch-natives.sh` for why.

@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>LiteRT.Gpu.Metal.Native</PackageId>
-    <Description>Optional Metal GPU accelerator for LiteRT (macOS / iOS).</Description>
+    <PackageId>LiteRT.Gpu.OpenCl</PackageId>
+    <Description>Optional OpenCL / GL GPU accelerator for LiteRT (Android)</Description>
 
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>

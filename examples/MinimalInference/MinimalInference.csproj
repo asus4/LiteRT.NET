@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RollForward>Major</RollForward>
     <RootNamespace>LiteRT.Examples.MinimalInference</RootNamespace>
     <IsPackable>false</IsPackable>
@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/LiteRT/LiteRT.csproj" />
-    <ProjectReference Include="../../src/LiteRT.Gpu.Metal.Native/LiteRT.Gpu.Metal.Native.csproj" />
+    <ProjectReference Include="../../src/LiteRT.Gpu.Metal/LiteRT.Gpu.Metal.csproj" />
   </ItemGroup>
 
   <ItemGroup>

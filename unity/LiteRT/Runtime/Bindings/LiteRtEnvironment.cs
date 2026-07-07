@@ -19,7 +19,7 @@ namespace LiteRT
         /// which on a CPU-only install logs warnings for the missing GPU/NPU plugins. Pass
         /// <see cref="LiteRtHwAccelerators.Cpu"/> for a quiet CPU-only environment, or include
         /// <see cref="LiteRtHwAccelerators.Gpu"/> to enable the GPU accelerator (requires the
-        /// LiteRT.Gpu.Native package so the accelerator dylibs sit beside the core library).
+        /// a LiteRT.Gpu.* package so the accelerator dylib sits beside the core library).
         /// </param>
         public LiteRtEnvironment(LiteRtHwAccelerators? autoRegisterAccelerators = null)
         {

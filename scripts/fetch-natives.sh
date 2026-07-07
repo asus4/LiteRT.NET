@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Populates the per-RID native payloads (runtimes/<rid>/native, .gitignore'd) for the
-# LiteRT.NET packages (core -> src/LiteRT, LM -> src/LiteRT.LM, GPU -> src/LiteRT.Gpu.*.Native),
+# LiteRT.NET packages (core -> src/LiteRT, LM -> src/LiteRT.LM, GPU -> src/LiteRT.Gpu.*),
 # from three best-effort sources (missing pieces warn, not fatal):
 #   - LiteRT-LM/prebuilt/<platform>/  desktop+iOS core, GPU accelerators, LM samplers, Gemma plugin
 #   - $LITERT_LM_OUT (default: out/)  locally built libLiteRtLmC (+ Gemma) for the host RID
@@ -20,9 +20,9 @@ ALL_RIDS="osx-arm64 linux-x64 linux-arm64 win-x64 android-arm64 android-x64 ios-
 RIDS="${LITERT_RIDS:-$ALL_RIDS}"
 
 CORE_PKG="$REPO_DIR/src/LiteRT"
-GPU_METAL_PKG="$REPO_DIR/src/LiteRT.Gpu.Metal.Native"
-GPU_WEBGPU_PKG="$REPO_DIR/src/LiteRT.Gpu.WebGpu.Native"
-GPU_OPENCL_PKG="$REPO_DIR/src/LiteRT.Gpu.OpenCl.Native"
+GPU_METAL_PKG="$REPO_DIR/src/LiteRT.Gpu.Metal"
+GPU_WEBGPU_PKG="$REPO_DIR/src/LiteRT.Gpu.WebGpu"
+GPU_OPENCL_PKG="$REPO_DIR/src/LiteRT.Gpu.OpenCl"
 LM_PKG="$REPO_DIR/src/LiteRT.LM"
 
 # .NET RID -> LiteRT-LM/prebuilt platform dir name.
